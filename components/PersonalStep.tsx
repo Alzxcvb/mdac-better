@@ -1,7 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FormData, NATIONALITIES } from "@/lib/types";
+
+function parseDOB(value: string): { day: string; month: string; year: string } {
+  if (!value) return { day: "", month: "", year: "" };
+  const [y, m, d] = value.split("-");
+  return { day: String(parseInt(d || "0", 10)), month: String(parseInt(m || "0", 10)), year: y || "" };
+}
 
 interface Props {
   data: FormData;
@@ -33,6 +39,20 @@ export default function PersonalStep({ data, onChange, onNext }: Props) {
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [natSearch, setNatSearch] = useState(data.nationality);
   const [showNatDropdown, setShowNatDropdown] = useState(false);
+  const [dob, setDob] = useState(() => parseDOB(data.dateOfBirth));
+
+  // Sync dob state → form state whenever any part changes
+  useEffect(() => {
+    if (dob.day && dob.month && dob.year && dob.year.length === 4) {
+      const mm = String(parseInt(dob.month)).padStart(2, "0");
+      const dd = String(parseInt(dob.day)).padStart(2, "0");
+      onChange({ dateOfBirth: `${dob.year}-${mm}-${dd}` });
+    } else if (!dob.day && !dob.month && !dob.year) {
+      onChange({ dateOfBirth: "" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dob]);
+
 
   const filteredNats = NATIONALITIES.filter((n) =>
     n.toLowerCase().includes(natSearch.toLowerCase())
@@ -154,30 +174,57 @@ export default function PersonalStep({ data, onChange, onNext }: Props) {
       </Field>
 
       {/* Date of Birth */}
-      <Field
-        label="Date of Birth"
-        hint="Use the date picker below — no clicking through 60 years"
-        required
-      >
-        <div className="relative">
-          <input
-            type="date"
-            className={inputClass("dateOfBirth")}
-            value={data.dateOfBirth}
-            onChange={(e) => {
-              onChange({ dateOfBirth: e.target.value });
-              if (errors.dateOfBirth) setErrors({ ...errors, dateOfBirth: undefined });
-            }}
-            max={new Date().toISOString().split("T")[0]}
-          />
+      <Field label="Date of Birth" hint="DD / MM / YYYY" required>
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={2}
+              placeholder="DD"
+              className={`${inputClass("dateOfBirth")} text-center`}
+              value={dob.day}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, "").slice(0, 2);
+                setDob((prev) => ({ ...prev, day: val }));
+                if (errors.dateOfBirth) setErrors({ ...errors, dateOfBirth: undefined });
+              }}
+            />
+          </div>
+          <div>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={2}
+              placeholder="MM"
+              className={`${inputClass("dateOfBirth")} text-center`}
+              value={dob.month}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, "").slice(0, 2);
+                setDob((prev) => ({ ...prev, month: val }));
+                if (errors.dateOfBirth) setErrors({ ...errors, dateOfBirth: undefined });
+              }}
+            />
+          </div>
+          <div>
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={4}
+              placeholder="YYYY"
+              className={`${inputClass("dateOfBirth")} text-center`}
+              value={dob.year}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+                setDob((prev) => ({ ...prev, year: val }));
+                if (errors.dateOfBirth) setErrors({ ...errors, dateOfBirth: undefined });
+              }}
+            />
+          </div>
         </div>
         {errors.dateOfBirth && (
           <p className="text-xs text-red-500 mt-1">{errors.dateOfBirth}</p>
         )}
-        <p className="text-xs text-[#003893] mt-1 flex items-center gap-1">
-          <span>✓</span>
-          <span>Fixed: native date input — just tap and pick</span>
-        </p>
       </Field>
 
       {/* Sex */}

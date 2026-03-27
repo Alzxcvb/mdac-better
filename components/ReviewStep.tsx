@@ -97,7 +97,7 @@ export default function ReviewStep({ data, onChange, onSubmit, onBack }: Props) 
           <div>
             <p className="text-sm font-semibold text-gray-800">Save profile for next trip</p>
             <p className="text-xs text-gray-500 mt-0.5">
-              Pre-fills your personal info automatically — your next arrival card takes 10 seconds
+              Saved to <strong>this device only</strong> — no account, no server. Next trip takes 10 seconds.
             </p>
           </div>
         </label>

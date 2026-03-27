@@ -2,16 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { hasProfile } from "@/lib/storage";
+import { hasProfile, loadProfile } from "@/lib/storage";
 
 export default function LandingPage() {
   const router = useRouter();
   const [hasSaved, setHasSaved] = useState(false);
+  const [savedName, setSavedName] = useState("");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     setHasSaved(hasProfile());
+    const profile = loadProfile();
+    if (profile?.fullName) setSavedName(profile.fullName);
   }, []);
 
   const handleNew = () => {
@@ -113,12 +116,17 @@ export default function LandingPage() {
           {mounted && hasSaved && (
             <button
               onClick={handleSaved}
-              className="w-full bg-white hover:bg-gray-50 text-[#003893] font-semibold text-base py-4 px-6 rounded-2xl border-2 border-[#003893] transition-all active:scale-95"
+              className="w-full bg-white hover:bg-gray-50 text-[#003893] font-semibold text-base py-4 px-6 rounded-2xl border-2 border-[#003893] transition-all active:scale-95 text-left flex items-center justify-between"
             >
-              Use Saved Profile
-              <span className="ml-2 text-xs font-normal text-gray-500">
-                (pre-fill from last trip)
-              </span>
+              <div>
+                <div>Use Saved Profile</div>
+                {savedName && (
+                  <div className="text-xs font-normal text-gray-500 mt-0.5">
+                    {savedName} — saved on this device
+                  </div>
+                )}
+              </div>
+              <span className="text-[#003893] opacity-50 text-lg">→</span>
             </button>
           )}
         </div>
