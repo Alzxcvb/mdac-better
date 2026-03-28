@@ -159,7 +159,6 @@ export default function PersonalStep({ data, onChange, onNext }: Props) {
               <input
                 type="file"
                 accept="image/*"
-                capture="environment"
                 className="hidden"
                 onChange={handlePassportScan}
               />

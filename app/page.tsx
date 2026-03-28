@@ -60,7 +60,7 @@ export default function LandingPage() {
 
         <div className="relative z-10 max-w-lg mx-auto">
           <div className="inline-flex items-center gap-2 bg-[#FFD100] text-[#003893] text-xs font-bold px-3 py-1 rounded-full mb-4">
-            <span>HACKATHON DEMO</span>
+            <span>BETA</span>
           </div>
           <h1 className="text-3xl font-bold leading-tight mb-3">
             Malaysia Digital
@@ -91,6 +91,7 @@ export default function LandingPage() {
           </p>
           <div className="space-y-2.5">
             {[
+              { icon: "📷", text: "Scan your passport — auto-fills the entire form" },
               { icon: "📅", text: "Date picker that works (no 60-year scrolling)" },
               { icon: "💾", text: "Profile saved — one tap on your next trip" },
               { icon: "📱", text: "Actually designed for mobile" },
