@@ -9,6 +9,19 @@ const nextConfig = withPWA({
   workboxOptions: {
     disableDevLogs: true,
   },
-})({});
+})({
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // Exclude playwright-core and @sparticuz/chromium from webpack bundling.
+      // These are loaded at runtime in serverless functions, not bundled.
+      config.externals = [
+        ...(Array.isArray(config.externals) ? config.externals : []),
+        "playwright-core",
+        "@sparticuz/chromium",
+      ];
+    }
+    return config;
+  },
+});
 
 export default nextConfig;
