@@ -1,13 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 
 export const maxDuration = 10;
 
+const PROMPT = `Extract passport information from this image. Read both the visible text fields AND the MRZ (machine readable zone) at the bottom if present.
+
+Return ONLY a JSON object with these exact fields (omit any you cannot read clearly):
+{
+  "fullName": "FIRSTNAME LASTNAME" (all caps, given names first then surname),
+  "passportNumber": "...",
+  "nationality": "..." (as a demonym like "American", "British", "Malaysian", etc.),
+  "dateOfBirth": "YYYY-MM-DD",
+  "sex": "Male" or "Female",
+  "passportExpiry": "YYYY-MM-DD",
+  "passportIssueDate": "YYYY-MM-DD"
+}
+
+Return ONLY the JSON. No markdown, no explanation.`;
+
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      { error: "Passport scanning not configured. ANTHROPIC_API_KEY is missing." },
+      { error: "Passport scanning not configured. OPENROUTER_API_KEY is missing." },
       { status: 500 }
     );
   }
@@ -21,48 +35,42 @@ export async function POST(req: NextRequest) {
 
     const bytes = await file.arrayBuffer();
     const base64 = Buffer.from(bytes).toString("base64");
-
     const mediaType = file.type === "image/png" ? "image/png" : "image/jpeg";
 
-    const client = new Anthropic({ apiKey });
-
-    const response = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 512,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: { type: "base64", media_type: mediaType, data: base64 },
-            },
-            {
-              type: "text",
-              text: `Extract passport information from this image. Read both the visible text fields AND the MRZ (machine readable zone) at the bottom if present.
-
-Return ONLY a JSON object with these exact fields (omit any you cannot read clearly):
-{
-  "fullName": "FIRSTNAME LASTNAME" (all caps, given names first then surname),
-  "passportNumber": "...",
-  "nationality": "..." (as a demonym like "American", "British", "Malaysian", etc.),
-  "dateOfBirth": "YYYY-MM-DD",
-  "sex": "Male" or "Female",
-  "passportExpiry": "YYYY-MM-DD",
-  "passportIssueDate": "YYYY-MM-DD"
-}
-
-Return ONLY the JSON. No markdown, no explanation.`,
-            },
-          ],
-        },
-      ],
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://mdac-better.vercel.app",
+        "X-Title": "MDAC Better",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.0-flash-001",
+        max_tokens: 512,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image_url",
+                image_url: { url: `data:${mediaType};base64,${base64}` },
+              },
+              { type: "text", text: PROMPT },
+            ],
+          },
+        ],
+      }),
     });
 
-    const text =
-      response.content[0].type === "text" ? response.content[0].text : "";
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`OpenRouter error ${response.status}: ${err}`);
+    }
 
-    // Parse JSON from response — handle possible markdown wrapping
+    const json = await response.json();
+    const text = json.choices?.[0]?.message?.content ?? "";
+
     const jsonStr = text.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
     const parsed = JSON.parse(jsonStr);
 
