@@ -50,9 +50,15 @@ export default function TravelStep({ data, onChange, onNext, onBack }: Props) {
     }
     if (!data.phoneNumber.trim()) e.phoneNumber = "Phone number is required";
     if (!data.arrivalDate) e.arrivalDate = "Arrival date is required";
+    if (!data.flightNumber.trim()) e.flightNumber = "Flight or transport number is required";
     if (!data.portOfEntry) e.portOfEntry = "Please select a port of entry";
+    if (!data.departureCity.trim()) e.departureCity = "Departure city is required";
+    if (!data.durationOfStay || Number(data.durationOfStay) < 1) e.durationOfStay = "Please enter a valid duration (1–90 days)";
     if (!data.purposeOfVisit) e.purposeOfVisit = "Please select a purpose of visit";
+    if (!data.hotelName.trim()) e.hotelName = "Hotel or accommodation name is required";
     if (!data.addressInMalaysia.trim()) e.addressInMalaysia = "Please provide your address or hotel in Malaysia";
+    if (!data.cityInMalaysia.trim()) e.cityInMalaysia = "City in Malaysia is required";
+    if (!data.postalCode.trim()) e.postalCode = "Postal code is required";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -169,6 +175,42 @@ export default function TravelStep({ data, onChange, onNext, onBack }: Props) {
         )}
       </Field>
 
+      {/* Flight / Transport Number */}
+      <Field label="Flight / Transport Number" required>
+        <input
+          type="text"
+          className={inputClass("flightNumber")}
+          value={data.flightNumber}
+          onChange={(e) => {
+            onChange({ flightNumber: e.target.value });
+            if (errors.flightNumber) setErrors({ ...errors, flightNumber: undefined });
+          }}
+          placeholder="e.g. MH370, AK6123"
+          autoCapitalize="characters"
+        />
+        {errors.flightNumber && (
+          <p className="text-xs text-red-500 mt-1">{errors.flightNumber}</p>
+        )}
+      </Field>
+
+      {/* Departure City */}
+      <Field label="Departure City" hint="City you are departing from" required>
+        <input
+          type="text"
+          className={inputClass("departureCity")}
+          value={data.departureCity}
+          onChange={(e) => {
+            onChange({ departureCity: e.target.value });
+            if (errors.departureCity) setErrors({ ...errors, departureCity: undefined });
+          }}
+          placeholder="e.g. London, New York, Singapore"
+          autoComplete="address-level2"
+        />
+        {errors.departureCity && (
+          <p className="text-xs text-red-500 mt-1">{errors.departureCity}</p>
+        )}
+      </Field>
+
       {/* Port of Entry */}
       <Field label="Port of Entry" required>
         <select
@@ -188,6 +230,26 @@ export default function TravelStep({ data, onChange, onNext, onBack }: Props) {
         </select>
         {errors.portOfEntry && (
           <p className="text-xs text-red-500 mt-1">{errors.portOfEntry}</p>
+        )}
+      </Field>
+
+      {/* Duration of Stay */}
+      <Field label="Duration of Stay (days)" hint="How many days you plan to stay" required>
+        <input
+          type="number"
+          className={inputClass("durationOfStay")}
+          value={data.durationOfStay}
+          onChange={(e) => {
+            onChange({ durationOfStay: e.target.value });
+            if (errors.durationOfStay) setErrors({ ...errors, durationOfStay: undefined });
+          }}
+          placeholder="e.g. 7"
+          min={1}
+          max={90}
+          inputMode="numeric"
+        />
+        {errors.durationOfStay && (
+          <p className="text-xs text-red-500 mt-1">{errors.durationOfStay}</p>
         )}
       </Field>
 
@@ -217,10 +279,27 @@ export default function TravelStep({ data, onChange, onNext, onBack }: Props) {
         )}
       </Field>
 
+      {/* Hotel / Accommodation Name */}
+      <Field label="Hotel / Accommodation Name" required>
+        <input
+          type="text"
+          className={inputClass("hotelName")}
+          value={data.hotelName}
+          onChange={(e) => {
+            onChange({ hotelName: e.target.value });
+            if (errors.hotelName) setErrors({ ...errors, hotelName: undefined });
+          }}
+          placeholder="e.g. Mandarin Oriental KL"
+        />
+        {errors.hotelName && (
+          <p className="text-xs text-red-500 mt-1">{errors.hotelName}</p>
+        )}
+      </Field>
+
       {/* Address in Malaysia */}
       <Field
-        label="Address / Hotel in Malaysia"
-        hint="Where you'll be staying"
+        label="Full Address in Malaysia"
+        hint="Street address of your accommodation"
         required
       >
         <textarea
@@ -232,12 +311,61 @@ export default function TravelStep({ data, onChange, onNext, onBack }: Props) {
             onChange({ addressInMalaysia: e.target.value });
             if (errors.addressInMalaysia) setErrors({ ...errors, addressInMalaysia: undefined });
           }}
-          placeholder="e.g. Mandarin Oriental Hotel, Kuala Lumpur City Centre"
+          placeholder="e.g. Kuala Lumpur City Centre, 50088"
           rows={2}
         />
         {errors.addressInMalaysia && (
           <p className="text-xs text-red-500 mt-1">{errors.addressInMalaysia}</p>
         )}
+      </Field>
+
+      {/* City in Malaysia + Postal Code (side by side) */}
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="City / State" required>
+          <input
+            type="text"
+            className={inputClass("cityInMalaysia")}
+            value={data.cityInMalaysia}
+            onChange={(e) => {
+              onChange({ cityInMalaysia: e.target.value });
+              if (errors.cityInMalaysia) setErrors({ ...errors, cityInMalaysia: undefined });
+            }}
+            placeholder="e.g. Kuala Lumpur"
+          />
+          {errors.cityInMalaysia && (
+            <p className="text-xs text-red-500 mt-1">{errors.cityInMalaysia}</p>
+          )}
+        </Field>
+
+        <Field label="Postal Code" required>
+          <input
+            type="text"
+            className={inputClass("postalCode")}
+            value={data.postalCode}
+            onChange={(e) => {
+              onChange({ postalCode: e.target.value });
+              if (errors.postalCode) setErrors({ ...errors, postalCode: undefined });
+            }}
+            placeholder="50088"
+            inputMode="numeric"
+            maxLength={5}
+          />
+          {errors.postalCode && (
+            <p className="text-xs text-red-500 mt-1">{errors.postalCode}</p>
+          )}
+        </Field>
+      </div>
+
+      {/* Accommodation Phone */}
+      <Field label="Accommodation Phone" hint="Phone number of your hotel / host">
+        <input
+          type="tel"
+          className={inputClass("accommodationPhone")}
+          value={data.accommodationPhone}
+          onChange={(e) => onChange({ accommodationPhone: e.target.value })}
+          placeholder="+60312345678"
+          inputMode="tel"
+        />
       </Field>
 
       {/* Navigation */}

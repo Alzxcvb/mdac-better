@@ -66,6 +66,8 @@ export default function PersonalStep({ data, onChange, onNext }: Props) {
     if (!data.dateOfBirth) e.dateOfBirth = "Date of birth is required";
     if (!data.sex) e.sex = "Please select your sex";
     if (!data.countryOfResidence.trim()) e.countryOfResidence = "Country of residence is required";
+    if (!data.passportIssueDate) e.passportIssueDate = "Passport issue date is required";
+    if (!data.homeAddress.trim()) e.homeAddress = "Home address is required";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -266,6 +268,42 @@ export default function PersonalStep({ data, onChange, onNext }: Props) {
         />
         {errors.countryOfResidence && (
           <p className="text-xs text-red-500 mt-1">{errors.countryOfResidence}</p>
+        )}
+      </Field>
+
+      {/* Passport Issue Date */}
+      <Field label="Passport Issue Date" hint="DD / MM / YYYY" required>
+        <input
+          type="date"
+          className={inputClass("passportIssueDate")}
+          value={data.passportIssueDate}
+          onChange={(e) => {
+            onChange({ passportIssueDate: e.target.value });
+            if (errors.passportIssueDate) setErrors({ ...errors, passportIssueDate: undefined });
+          }}
+        />
+        {errors.passportIssueDate && (
+          <p className="text-xs text-red-500 mt-1">{errors.passportIssueDate}</p>
+        )}
+      </Field>
+
+      {/* Home Address */}
+      <Field label="Home Address" hint="Your residential address in your home country" required>
+        <textarea
+          className={`w-full px-4 py-3 rounded-xl border text-base bg-white transition-colors outline-none focus:ring-2 focus:ring-[#003893]/20 focus:border-[#003893] resize-none ${
+            errors.homeAddress ? "border-red-400 bg-red-50" : "border-gray-200"
+          }`}
+          value={data.homeAddress}
+          onChange={(e) => {
+            onChange({ homeAddress: e.target.value });
+            if (errors.homeAddress) setErrors({ ...errors, homeAddress: undefined });
+          }}
+          placeholder="e.g. 123 Main Street, New York, NY 10001, USA"
+          rows={2}
+          autoComplete="street-address"
+        />
+        {errors.homeAddress && (
+          <p className="text-xs text-red-500 mt-1">{errors.homeAddress}</p>
         )}
       </Field>
 

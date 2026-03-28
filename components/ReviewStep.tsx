@@ -52,6 +52,8 @@ export default function ReviewStep({ data, onChange, onSubmit, onBack }: Props) 
           <ReviewRow label="Date of Birth" value={formatDate(data.dateOfBirth)} />
           <ReviewRow label="Sex" value={data.sex} />
           <ReviewRow label="Country of Residence" value={data.countryOfResidence} />
+          <ReviewRow label="Passport Issue Date" value={formatDate(data.passportIssueDate)} />
+          <ReviewRow label="Home Address" value={data.homeAddress} />
         </div>
       </div>
 
@@ -65,9 +67,16 @@ export default function ReviewStep({ data, onChange, onSubmit, onBack }: Props) 
           <ReviewRow label="Email" value={data.email} />
           <ReviewRow label="Phone" value={`${data.phoneCountryCode} ${data.phoneNumber}`} />
           <ReviewRow label="Arrival Date" value={formatDate(data.arrivalDate)} />
+          <ReviewRow label="Flight / Transport" value={data.flightNumber} />
+          <ReviewRow label="Departure City" value={data.departureCity} />
           <ReviewRow label="Port of Entry" value={data.portOfEntry} />
+          <ReviewRow label="Duration of Stay" value={data.durationOfStay ? `${data.durationOfStay} days` : ""} />
           <ReviewRow label="Purpose" value={data.purposeOfVisit} />
+          <ReviewRow label="Hotel / Accommodation" value={data.hotelName} />
           <ReviewRow label="Address in MY" value={data.addressInMalaysia} />
+          <ReviewRow label="City in MY" value={data.cityInMalaysia} />
+          <ReviewRow label="Postal Code" value={data.postalCode} />
+          <ReviewRow label="Accommodation Phone" value={data.accommodationPhone} />
         </div>
       </div>
 
@@ -115,7 +124,7 @@ export default function ReviewStep({ data, onChange, onSubmit, onBack }: Props) 
           onClick={onSubmit}
           className="flex-1 bg-[#003893] hover:bg-blue-900 text-white font-semibold text-base py-4 rounded-2xl transition-all active:scale-95"
         >
-          Generate Card
+          Continue →
         </button>
       </div>
     </div>

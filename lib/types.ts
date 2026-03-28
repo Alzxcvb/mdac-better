@@ -6,6 +6,8 @@ export interface FormData {
   dateOfBirth: string;
   sex: "Male" | "Female" | "";
   countryOfResidence: string;
+  passportIssueDate: string;
+  homeAddress: string;
 
   // Travel Info (Step 2b)
   passportExpiry: string;
@@ -13,9 +15,16 @@ export interface FormData {
   phoneCountryCode: string;
   phoneNumber: string;
   arrivalDate: string;
+  flightNumber: string;
   portOfEntry: string;
+  departureCity: string;
+  durationOfStay: string;  // number as string for form input
   purposeOfVisit: string;
+  hotelName: string;
   addressInMalaysia: string;
+  cityInMalaysia: string;
+  postalCode: string;
+  accommodationPhone: string;
 
   // Meta
   saveProfile: boolean;
@@ -28,14 +37,23 @@ export const EMPTY_FORM: FormData = {
   dateOfBirth: "",
   sex: "",
   countryOfResidence: "",
+  passportIssueDate: "",
+  homeAddress: "",
   passportExpiry: "",
   email: "",
   phoneCountryCode: "+1",
   phoneNumber: "",
   arrivalDate: "",
+  flightNumber: "",
   portOfEntry: "",
+  departureCity: "",
+  durationOfStay: "",
   purposeOfVisit: "",
+  hotelName: "",
   addressInMalaysia: "",
+  cityInMalaysia: "",
+  postalCode: "",
+  accommodationPhone: "",
   saveProfile: true,
 };
 
@@ -46,10 +64,13 @@ export const PROFILE_FIELDS: (keyof FormData)[] = [
   "dateOfBirth",
   "sex",
   "countryOfResidence",
+  "passportIssueDate",
+  "homeAddress",
   "passportExpiry",
   "email",
   "phoneCountryCode",
   "phoneNumber",
+  "departureCity",
 ];
 
 export const NATIONALITIES = [

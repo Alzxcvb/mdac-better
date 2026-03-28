@@ -71,9 +71,15 @@ export function resetTripFields(data: FormData): FormData {
   return {
     ...data,
     arrivalDate: "",
+    flightNumber: "",
     portOfEntry: "",
+    durationOfStay: "",
     purposeOfVisit: "",
+    hotelName: "",
     addressInMalaysia: "",
+    cityInMalaysia: "",
+    postalCode: "",
+    accommodationPhone: "",
     saveProfile: true,
   };
 }

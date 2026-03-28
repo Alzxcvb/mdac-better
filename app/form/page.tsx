@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import PersonalStep from "@/components/PersonalStep";
 import TravelStep from "@/components/TravelStep";
 import ReviewStep from "@/components/ReviewStep";
+import SubmitStep from "@/components/SubmitStep";
 import StepIndicator from "@/components/StepIndicator";
 import { FormData, EMPTY_FORM } from "@/lib/types";
 import {
@@ -75,13 +76,19 @@ function FormContent() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
-  const handleSubmit = useCallback(() => {
+  // Called when ReviewStep "Continue" is clicked — move to step 4
+  const handleReviewContinue = useCallback(() => {
     // Save profile if toggle is on
     if (formData.saveProfile) {
       saveProfile(formData);
     }
     clearDraft();
+    setStep(4);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [formData]);
 
+  // Called when SubmitStep completes (either official or demo QR)
+  const handleSubmit = useCallback(() => {
     // Encode data into URL for the confirmation page
     const encoded = encodeURIComponent(JSON.stringify(formData));
     router.push(`/confirmation?data=${encoded}`);
@@ -97,7 +104,11 @@ function FormContent() {
 
   return (
     <>
-      <StepIndicator currentStep={step} totalSteps={3} />
+      <StepIndicator
+        currentStep={step}
+        totalSteps={4}
+        labels={["Personal", "Travel", "Review", "Submit"]}
+      />
 
       <div className="px-6 py-6 max-w-lg mx-auto">
         {step === 1 && (
@@ -115,8 +126,15 @@ function FormContent() {
           <ReviewStep
             data={formData}
             onChange={handleChange}
-            onSubmit={handleSubmit}
+            onSubmit={handleReviewContinue}
             onBack={handleBack}
+          />
+        )}
+        {step === 4 && (
+          <SubmitStep
+            data={formData}
+            onBack={handleBack}
+            onComplete={handleSubmit}
           />
         )}
       </div>
