@@ -76,6 +76,7 @@ export default function PersonalStep({ data, onChange, onNext }: Props) {
       if (d.sex === "Male" || d.sex === "Female") updates.sex = d.sex;
       if (d.passportExpiry) updates.passportExpiry = d.passportExpiry;
       if (d.countryOfIssuance) updates.countryOfPassportIssuance = d.countryOfIssuance;
+      if (d.placeOfBirth) updates.placeOfBirth = d.placeOfBirth;
       if (d.passportType === "Ordinary" || d.passportType === "Official" || d.passportType === "Diplomatic") {
         updates.passportType = d.passportType;
       }
@@ -114,6 +115,7 @@ export default function PersonalStep({ data, onChange, onNext }: Props) {
     if (!data.sex) e.sex = "Please select your sex";
     if (!data.passportType) e.passportType = "Please select passport type";
     if (!data.countryOfPassportIssuance.trim()) e.countryOfPassportIssuance = "Country of issuance is required";
+    if (!data.placeOfBirth.trim()) e.placeOfBirth = "Place of birth is required";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -384,6 +386,24 @@ export default function PersonalStep({ data, onChange, onNext }: Props) {
         />
         {errors.countryOfPassportIssuance && (
           <p className="text-xs text-red-500 mt-1">{errors.countryOfPassportIssuance}</p>
+        )}
+      </Field>
+
+      {/* Place of Birth */}
+      <Field label="Place of Birth (Country)" required>
+        <input
+          type="text"
+          className={inputClass("placeOfBirth")}
+          value={data.placeOfBirth}
+          onChange={(e) => {
+            onChange({ placeOfBirth: e.target.value });
+            if (errors.placeOfBirth) setErrors({ ...errors, placeOfBirth: undefined });
+          }}
+          placeholder="e.g. United States"
+          autoComplete="country-name"
+        />
+        {errors.placeOfBirth && (
+          <p className="text-xs text-red-500 mt-1">{errors.placeOfBirth}</p>
         )}
       </Field>
 

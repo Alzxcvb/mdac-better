@@ -7,6 +7,7 @@ export interface FormData {
   sex: "Male" | "Female" | "";
   passportType: "Ordinary" | "Official" | "Diplomatic" | "";
   countryOfPassportIssuance: string;
+  placeOfBirth: string;
 
   // Travel & Contact Info (Step 2)
   passportExpiry: string;
@@ -17,7 +18,7 @@ export interface FormData {
   departureDate: string;
   modeOfTransport: "Air" | "Land" | "Sea" | "";
   flightNumber: string;
-  departureCity: string;
+  departureCountry: string;       // Country of last departure (maps to official "embark")
   hotelName: string;
   addressInMalaysia: string;
   cityInMalaysia: string;
@@ -36,6 +37,7 @@ export const EMPTY_FORM: FormData = {
   sex: "",
   passportType: "",
   countryOfPassportIssuance: "",
+  placeOfBirth: "",
   passportExpiry: "",
   email: "",
   phoneCountryCode: "+1",
@@ -44,7 +46,7 @@ export const EMPTY_FORM: FormData = {
   departureDate: "",
   modeOfTransport: "",
   flightNumber: "",
-  departureCity: "",
+  departureCountry: "",
   hotelName: "",
   addressInMalaysia: "",
   cityInMalaysia: "",
@@ -61,11 +63,12 @@ export const PROFILE_FIELDS: (keyof FormData)[] = [
   "sex",
   "passportType",
   "countryOfPassportIssuance",
+  "placeOfBirth",
   "passportExpiry",
   "email",
   "phoneCountryCode",
   "phoneNumber",
-  "departureCity",
+  "departureCountry",
 ];
 
 export const NATIONALITIES = [

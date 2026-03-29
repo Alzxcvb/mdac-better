@@ -3,12 +3,12 @@
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import QRConfirmation from "@/components/QRConfirmation";
-import { FormData } from "@/lib/types";
+import { type FormData } from "@/lib/types";
 import { resetTripFields } from "@/lib/storage";
 
-// ---- Official Submit Button Section ----
+// ---- Official Submit Section (Multi-step) ----
 
-type SubmitStatus = "idle" | "loading" | "success" | "error";
+type SubmitPhase = "idle" | "connecting" | "submitting" | "success" | "error";
 
 interface SubmitResult {
   success: boolean;
@@ -16,92 +16,138 @@ interface SubmitResult {
   error?: string;
   fallbackUrl?: string;
   partial?: boolean;
+  captchaRequired?: boolean;
 }
 
+const PHASE_MESSAGES: Record<string, string> = {
+  connecting: "Connecting to Malaysia immigration...",
+  submitting: "Submitting your arrival card...",
+};
+
 function OfficialSubmitSection({ data }: { data: FormData }) {
-  const [status, setStatus] = useState<SubmitStatus>("idle");
+  const [phase, setPhase] = useState<SubmitPhase>("idle");
   const [result, setResult] = useState<SubmitResult | null>(null);
 
   const handleSubmit = async () => {
-    setStatus("loading");
+    setPhase("connecting");
     setResult(null);
 
     try {
-      const res = await fetch("/api/submit-mdac", {
+      // Step 1: Initialize session with official MDAC server
+      const initRes = await fetch("/api/submit-mdac/init", { method: "POST" });
+      const initJson = await initRes.json();
+
+      if (!initRes.ok || !initJson.success) {
+        throw new Error(initJson.error || "Could not connect to MDAC server");
+      }
+
+      // Step 2: Submit the form
+      setPhase("submitting");
+
+      const submitRes = await fetch("/api/submit-mdac/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          session: initJson.session,
+          formData: data,
+        }),
       });
 
-      const json: SubmitResult = await res.json();
-      setResult(json);
-      setStatus(json.success ? "success" : "error");
+      const submitJson: SubmitResult = await submitRes.json();
+      setResult(submitJson);
+      setPhase(submitJson.success ? "success" : "error");
+
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Network error";
       setResult({
         success: false,
-        error: `Could not reach submission server: ${message}`,
-        fallbackUrl: "https://imigresen-online.imi.gov.my/mdac/main",
+        error: message,
+        fallbackUrl: "https://imigresen-online.imi.gov.my/mdac/main?registerMain",
       });
-      setStatus("error");
+      setPhase("error");
     }
   };
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
       <div>
-        <h3 className="text-base font-bold text-gray-900">Want the official border-valid QR?</h3>
+        <h3 className="text-base font-bold text-gray-900">Submit to Official MDAC</h3>
         <p className="text-sm text-gray-500 mt-1">
-          We&apos;ll submit your data to Malaysia&apos;s official immigration system. You&apos;ll receive a PIN by email
-          to retrieve your official QR code.
+          We&apos;ll submit your data directly to Malaysia&apos;s immigration system.
+          You&apos;ll receive a PIN by email to get your official QR code.
         </p>
       </div>
 
-      {status === "idle" && (
+      {phase === "idle" && (
         <button
           onClick={handleSubmit}
           className="w-full bg-[#003893] hover:bg-blue-900 text-white font-semibold text-base py-4 rounded-2xl transition-all active:scale-95"
         >
-          Submit to Official MDAC →
+          Submit to Official MDAC
         </button>
       )}
 
-      {status === "loading" && (
-        <div className="flex items-center justify-center gap-3 py-4">
-          <div className="w-5 h-5 border-2 border-[#003893] border-t-transparent rounded-full animate-spin flex-shrink-0" />
-          <span className="text-sm font-medium text-gray-600">Submitting to Malaysia immigration...</span>
+      {(phase === "connecting" || phase === "submitting") && (
+        <div className="space-y-3 py-2">
+          <div className="flex items-center gap-3">
+            <div className="w-5 h-5 border-2 border-[#003893] border-t-transparent rounded-full animate-spin flex-shrink-0" />
+            <span className="text-sm font-medium text-gray-600">{PHASE_MESSAGES[phase]}</span>
+          </div>
+          {/* Progress bar */}
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-[#003893] rounded-full transition-all duration-1000"
+              style={{ width: phase === "connecting" ? "40%" : "80%" }}
+            />
+          </div>
         </div>
       )}
 
-      {status === "success" && result && (
+      {phase === "success" && result && (
         <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-xl p-4">
           <div className="flex-shrink-0 mt-0.5">
             <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <p className="text-sm text-green-800">
-            Done! Check <strong>{data.email}</strong> for your PIN code. The official QR will be in
-            your confirmation email from Malaysia Immigration.
-          </p>
+          <div>
+            <p className="text-sm font-semibold text-green-800">Submitted successfully!</p>
+            <p className="text-sm text-green-700 mt-1">
+              Check <strong>{data.email}</strong> for your PIN code.
+              Use it on the official MDAC site to retrieve your border-valid QR code.
+            </p>
+          </div>
         </div>
       )}
 
-      {status === "error" && result && (
+      {phase === "error" && result && (
         <div className="space-y-3">
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-            <p className="text-sm text-red-800">{result.error}</p>
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <p className="text-sm font-semibold text-amber-800 mb-1">
+              {result.captchaRequired ? "CAPTCHA required" : "Submission issue"}
+            </p>
+            <p className="text-sm text-amber-700">{result.error}</p>
+            {result.partial && (
+              <p className="text-sm text-amber-600 mt-2">
+                Check your email just in case — the submission may have gone through.
+              </p>
+            )}
           </div>
+
           {result.fallbackUrl && (
             <a
               href={result.fallbackUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="block text-center text-sm font-semibold text-[#003893] underline"
+              className="flex items-center justify-center gap-2 w-full bg-white border-2 border-[#003893] text-[#003893] font-semibold text-sm py-3 rounded-2xl transition-all active:scale-95"
             >
-              Submit manually on the official site →
+              <span>Submit manually on official site</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
             </a>
           )}
+
           <button
             onClick={handleSubmit}
             className="w-full bg-[#003893] hover:bg-blue-900 text-white font-semibold text-sm py-3 rounded-2xl transition-all active:scale-95"

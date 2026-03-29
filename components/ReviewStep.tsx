@@ -53,6 +53,7 @@ export default function ReviewStep({ data, onChange, onSubmit, onBack }: Props) 
           <ReviewRow label="Date of Birth" value={formatDate(data.dateOfBirth)} />
           <ReviewRow label="Sex" value={data.sex} />
           <ReviewRow label="Country of Issuance" value={data.countryOfPassportIssuance} />
+          <ReviewRow label="Place of Birth" value={data.placeOfBirth} />
         </div>
       </div>
 
@@ -68,7 +69,7 @@ export default function ReviewStep({ data, onChange, onSubmit, onBack }: Props) 
           <ReviewRow label="Arrival" value={formatDate(data.arrivalDate)} />
           <ReviewRow label="Departure" value={formatDate(data.departureDate)} />
           <ReviewRow label="Transport" value={`${data.modeOfTransport} — ${data.flightNumber}`} />
-          <ReviewRow label="Departed From" value={data.departureCity} />
+          <ReviewRow label="Departed From" value={data.departureCountry} />
           <ReviewRow label="Hotel" value={data.hotelName} />
           <ReviewRow label="Address in MY" value={data.addressInMalaysia} />
           <ReviewRow label="City / State" value={`${data.cityInMalaysia}, ${data.stateInMalaysia}`} />

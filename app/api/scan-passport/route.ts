@@ -13,6 +13,7 @@ Return ONLY a JSON object with these exact fields (omit any you cannot read clea
   "sex": "Male" or "Female",
   "passportExpiry": "YYYY-MM-DD",
   "countryOfIssuance": "..." (full country name like "United States", "United Kingdom", "Malaysia", etc.),
+  "placeOfBirth": "..." (full country name),
   "passportType": "Ordinary" or "Official" or "Diplomatic"
 }
 

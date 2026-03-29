@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { type FormData, PHONE_COUNTRY_CODES, MALAYSIAN_STATES } from "@/lib/types";
+import { COUNTRIES } from "@/lib/mdac-codes";
 
 interface Props {
   data: FormData;
@@ -53,7 +54,7 @@ export default function TravelStep({ data, onChange, onNext, onBack }: Props) {
     if (!data.departureDate) e.departureDate = "Departure date is required";
     if (!data.modeOfTransport) e.modeOfTransport = "Please select mode of transport";
     if (!data.flightNumber.trim()) e.flightNumber = "Flight or transport number is required";
-    if (!data.departureCity.trim()) e.departureCity = "Last port of departure is required";
+    if (!data.departureCountry.trim()) e.departureCountry = "Last port of departure is required";
     if (!data.hotelName.trim()) e.hotelName = "Hotel or accommodation name is required";
     if (!data.addressInMalaysia.trim()) e.addressInMalaysia = "Please provide your address in Malaysia";
     if (!data.cityInMalaysia.trim()) e.cityInMalaysia = "City is required";
@@ -232,21 +233,23 @@ export default function TravelStep({ data, onChange, onNext, onBack }: Props) {
         )}
       </Field>
 
-      {/* Last Port of Departure */}
-      <Field label="Last Port of Departure" hint="City/airport you departed from" required>
-        <input
-          type="text"
-          className={inputClass("departureCity")}
-          value={data.departureCity}
+      {/* Country of Last Departure */}
+      <Field label="Country of Last Departure" hint="Country you departed from to enter Malaysia" required>
+        <select
+          className={selectClass("departureCountry")}
+          value={data.departureCountry}
           onChange={(e) => {
-            onChange({ departureCity: e.target.value });
-            if (errors.departureCity) setErrors({ ...errors, departureCity: undefined });
+            onChange({ departureCountry: e.target.value });
+            if (errors.departureCountry) setErrors({ ...errors, departureCountry: undefined });
           }}
-          placeholder="e.g. London Heathrow, Singapore Changi"
-          autoComplete="off"
-        />
-        {errors.departureCity && (
-          <p className="text-xs text-red-500 mt-1">{errors.departureCity}</p>
+        >
+          <option value="">Select country...</option>
+          {COUNTRIES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+        {errors.departureCountry && (
+          <p className="text-xs text-red-500 mt-1">{errors.departureCountry}</p>
         )}
       </Field>
 
