@@ -48,12 +48,11 @@ export default function ReviewStep({ data, onChange, onSubmit, onBack }: Props) 
         <div className="px-4 pb-1 pt-1">
           <ReviewRow label="Full Name" value={data.fullName} />
           <ReviewRow label="Passport No." value={data.passportNumber} />
+          <ReviewRow label="Passport Type" value={data.passportType} />
           <ReviewRow label="Nationality" value={data.nationality} />
           <ReviewRow label="Date of Birth" value={formatDate(data.dateOfBirth)} />
           <ReviewRow label="Sex" value={data.sex} />
-          <ReviewRow label="Country of Residence" value={data.countryOfResidence} />
-          <ReviewRow label="Passport Issue Date" value={formatDate(data.passportIssueDate)} />
-          <ReviewRow label="Home Address" value={data.homeAddress} />
+          <ReviewRow label="Country of Issuance" value={data.countryOfPassportIssuance} />
         </div>
       </div>
 
@@ -66,17 +65,14 @@ export default function ReviewStep({ data, onChange, onSubmit, onBack }: Props) 
           <ReviewRow label="Passport Expiry" value={formatDate(data.passportExpiry)} />
           <ReviewRow label="Email" value={data.email} />
           <ReviewRow label="Phone" value={`${data.phoneCountryCode} ${data.phoneNumber}`} />
-          <ReviewRow label="Arrival Date" value={formatDate(data.arrivalDate)} />
-          <ReviewRow label="Flight / Transport" value={data.flightNumber} />
-          <ReviewRow label="Departure City" value={data.departureCity} />
-          <ReviewRow label="Port of Entry" value={data.portOfEntry} />
-          <ReviewRow label="Duration of Stay" value={data.durationOfStay ? `${data.durationOfStay} days` : ""} />
-          <ReviewRow label="Purpose" value={data.purposeOfVisit} />
-          <ReviewRow label="Hotel / Accommodation" value={data.hotelName} />
+          <ReviewRow label="Arrival" value={formatDate(data.arrivalDate)} />
+          <ReviewRow label="Departure" value={formatDate(data.departureDate)} />
+          <ReviewRow label="Transport" value={`${data.modeOfTransport} — ${data.flightNumber}`} />
+          <ReviewRow label="Departed From" value={data.departureCity} />
+          <ReviewRow label="Hotel" value={data.hotelName} />
           <ReviewRow label="Address in MY" value={data.addressInMalaysia} />
-          <ReviewRow label="City in MY" value={data.cityInMalaysia} />
+          <ReviewRow label="City / State" value={`${data.cityInMalaysia}, ${data.stateInMalaysia}`} />
           <ReviewRow label="Postal Code" value={data.postalCode} />
-          <ReviewRow label="Accommodation Phone" value={data.accommodationPhone} />
         </div>
       </div>
 

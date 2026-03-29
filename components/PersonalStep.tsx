@@ -75,7 +75,10 @@ export default function PersonalStep({ data, onChange, onNext }: Props) {
       }
       if (d.sex === "Male" || d.sex === "Female") updates.sex = d.sex;
       if (d.passportExpiry) updates.passportExpiry = d.passportExpiry;
-      if (d.passportIssueDate) updates.passportIssueDate = d.passportIssueDate;
+      if (d.countryOfIssuance) updates.countryOfPassportIssuance = d.countryOfIssuance;
+      if (d.passportType === "Ordinary" || d.passportType === "Official" || d.passportType === "Diplomatic") {
+        updates.passportType = d.passportType;
+      }
 
       onChange(updates);
       setScanState("done");
@@ -109,9 +112,8 @@ export default function PersonalStep({ data, onChange, onNext }: Props) {
     if (!data.nationality) e.nationality = "Please select your nationality";
     if (!data.dateOfBirth) e.dateOfBirth = "Date of birth is required";
     if (!data.sex) e.sex = "Please select your sex";
-    if (!data.countryOfResidence.trim()) e.countryOfResidence = "Country of residence is required";
-    if (!data.passportIssueDate) e.passportIssueDate = "Passport issue date is required";
-    if (!data.homeAddress.trim()) e.homeAddress = "Home address is required";
+    if (!data.passportType) e.passportType = "Please select passport type";
+    if (!data.countryOfPassportIssuance.trim()) e.countryOfPassportIssuance = "Country of issuance is required";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -343,57 +345,45 @@ export default function PersonalStep({ data, onChange, onNext }: Props) {
         {errors.sex && <p className="text-xs text-red-500 mt-1">{errors.sex}</p>}
       </Field>
 
-      {/* Country of Residence */}
-      <Field label="Country of Residence" required>
+      {/* Passport Type */}
+      <Field label="Passport Type" required>
+        <div className="flex gap-2">
+          {(["Ordinary", "Official", "Diplomatic"] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => {
+                onChange({ passportType: option });
+                if (errors.passportType) setErrors({ ...errors, passportType: undefined });
+              }}
+              className={`flex-1 py-3 rounded-xl border-2 text-sm font-semibold transition-all ${
+                data.passportType === option
+                  ? "border-[#003893] bg-[#003893] text-white"
+                  : "border-gray-200 text-gray-600 hover:border-gray-300"
+              }`}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+        {errors.passportType && <p className="text-xs text-red-500 mt-1">{errors.passportType}</p>}
+      </Field>
+
+      {/* Country of Passport Issuance */}
+      <Field label="Country of Passport Issuance" required>
         <input
           type="text"
-          className={inputClass("countryOfResidence")}
-          value={data.countryOfResidence}
+          className={inputClass("countryOfPassportIssuance")}
+          value={data.countryOfPassportIssuance}
           onChange={(e) => {
-            onChange({ countryOfResidence: e.target.value });
-            if (errors.countryOfResidence) setErrors({ ...errors, countryOfResidence: undefined });
+            onChange({ countryOfPassportIssuance: e.target.value });
+            if (errors.countryOfPassportIssuance) setErrors({ ...errors, countryOfPassportIssuance: undefined });
           }}
-          placeholder="e.g. Singapore"
+          placeholder="e.g. United States"
           autoComplete="country-name"
         />
-        {errors.countryOfResidence && (
-          <p className="text-xs text-red-500 mt-1">{errors.countryOfResidence}</p>
-        )}
-      </Field>
-
-      {/* Passport Issue Date */}
-      <Field label="Passport Issue Date" hint="DD / MM / YYYY" required>
-        <input
-          type="date"
-          className={inputClass("passportIssueDate")}
-          value={data.passportIssueDate}
-          onChange={(e) => {
-            onChange({ passportIssueDate: e.target.value });
-            if (errors.passportIssueDate) setErrors({ ...errors, passportIssueDate: undefined });
-          }}
-        />
-        {errors.passportIssueDate && (
-          <p className="text-xs text-red-500 mt-1">{errors.passportIssueDate}</p>
-        )}
-      </Field>
-
-      {/* Home Address */}
-      <Field label="Home Address" hint="Your residential address in your home country" required>
-        <textarea
-          className={`w-full px-4 py-3 rounded-xl border text-base bg-white transition-colors outline-none focus:ring-2 focus:ring-[#003893]/20 focus:border-[#003893] resize-none ${
-            errors.homeAddress ? "border-red-400 bg-red-50" : "border-gray-200"
-          }`}
-          value={data.homeAddress}
-          onChange={(e) => {
-            onChange({ homeAddress: e.target.value });
-            if (errors.homeAddress) setErrors({ ...errors, homeAddress: undefined });
-          }}
-          placeholder="e.g. 123 Main Street, New York, NY 10001, USA"
-          rows={2}
-          autoComplete="street-address"
-        />
-        {errors.homeAddress && (
-          <p className="text-xs text-red-500 mt-1">{errors.homeAddress}</p>
+        {errors.countryOfPassportIssuance && (
+          <p className="text-xs text-red-500 mt-1">{errors.countryOfPassportIssuance}</p>
         )}
       </Field>
 

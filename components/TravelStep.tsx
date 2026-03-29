@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FormData, PORTS_OF_ENTRY, PURPOSES_OF_VISIT, PHONE_COUNTRY_CODES } from "@/lib/types";
+import { type FormData, PHONE_COUNTRY_CODES, MALAYSIAN_STATES } from "@/lib/types";
 
 interface Props {
   data: FormData;
@@ -50,14 +50,14 @@ export default function TravelStep({ data, onChange, onNext, onBack }: Props) {
     }
     if (!data.phoneNumber.trim()) e.phoneNumber = "Phone number is required";
     if (!data.arrivalDate) e.arrivalDate = "Arrival date is required";
+    if (!data.departureDate) e.departureDate = "Departure date is required";
+    if (!data.modeOfTransport) e.modeOfTransport = "Please select mode of transport";
     if (!data.flightNumber.trim()) e.flightNumber = "Flight or transport number is required";
-    if (!data.portOfEntry) e.portOfEntry = "Please select a port of entry";
-    if (!data.departureCity.trim()) e.departureCity = "Departure city is required";
-    if (!data.durationOfStay || Number(data.durationOfStay) < 1) e.durationOfStay = "Please enter a valid duration (1–90 days)";
-    if (!data.purposeOfVisit) e.purposeOfVisit = "Please select a purpose of visit";
+    if (!data.departureCity.trim()) e.departureCity = "Last port of departure is required";
     if (!data.hotelName.trim()) e.hotelName = "Hotel or accommodation name is required";
-    if (!data.addressInMalaysia.trim()) e.addressInMalaysia = "Please provide your address or hotel in Malaysia";
-    if (!data.cityInMalaysia.trim()) e.cityInMalaysia = "City in Malaysia is required";
+    if (!data.addressInMalaysia.trim()) e.addressInMalaysia = "Please provide your address in Malaysia";
+    if (!data.cityInMalaysia.trim()) e.cityInMalaysia = "City is required";
+    if (!data.stateInMalaysia) e.stateInMalaysia = "State is required";
     if (!data.postalCode.trim()) e.postalCode = "Postal code is required";
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -102,7 +102,7 @@ export default function TravelStep({ data, onChange, onNext, onBack }: Props) {
       </Field>
 
       {/* Email */}
-      <Field label="Email Address" required>
+      <Field label="Email Address" hint="Confirmation PIN will be sent here" required>
         <input
           type="email"
           className={inputClass("email")}
@@ -154,11 +154,7 @@ export default function TravelStep({ data, onChange, onNext, onBack }: Props) {
       </Field>
 
       {/* Arrival Date */}
-      <Field
-        label="Intended Date of Arrival"
-        hint="Must be within the next 3 days"
-        required
-      >
+      <Field label="Date of Arrival in Malaysia" hint="Must be within the next 3 days" required>
         <input
           type="date"
           className={inputClass("arrivalDate")}
@@ -175,8 +171,51 @@ export default function TravelStep({ data, onChange, onNext, onBack }: Props) {
         )}
       </Field>
 
+      {/* Departure Date */}
+      <Field label="Date of Departure from Malaysia" required>
+        <input
+          type="date"
+          className={inputClass("departureDate")}
+          value={data.departureDate}
+          onChange={(e) => {
+            onChange({ departureDate: e.target.value });
+            if (errors.departureDate) setErrors({ ...errors, departureDate: undefined });
+          }}
+          min={data.arrivalDate || minDate}
+        />
+        {errors.departureDate && (
+          <p className="text-xs text-red-500 mt-1">{errors.departureDate}</p>
+        )}
+      </Field>
+
+      {/* Mode of Transport */}
+      <Field label="Mode of Transport" required>
+        <div className="flex gap-3">
+          {(["Air", "Land", "Sea"] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => {
+                onChange({ modeOfTransport: mode });
+                if (errors.modeOfTransport) setErrors({ ...errors, modeOfTransport: undefined });
+              }}
+              className={`flex-1 py-3 rounded-xl border-2 text-sm font-semibold transition-all ${
+                data.modeOfTransport === mode
+                  ? "border-[#003893] bg-[#003893] text-white"
+                  : "border-gray-200 text-gray-600 hover:border-gray-300"
+              }`}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
+        {errors.modeOfTransport && (
+          <p className="text-xs text-red-500 mt-1">{errors.modeOfTransport}</p>
+        )}
+      </Field>
+
       {/* Flight / Transport Number */}
-      <Field label="Flight / Transport Number" required>
+      <Field label="Flight / Ship / Transport Number" required>
         <input
           type="text"
           className={inputClass("flightNumber")}
@@ -193,8 +232,8 @@ export default function TravelStep({ data, onChange, onNext, onBack }: Props) {
         )}
       </Field>
 
-      {/* Departure City */}
-      <Field label="Departure City" hint="City you are departing from" required>
+      {/* Last Port of Departure */}
+      <Field label="Last Port of Departure" hint="City/airport you departed from" required>
         <input
           type="text"
           className={inputClass("departureCity")}
@@ -203,79 +242,11 @@ export default function TravelStep({ data, onChange, onNext, onBack }: Props) {
             onChange({ departureCity: e.target.value });
             if (errors.departureCity) setErrors({ ...errors, departureCity: undefined });
           }}
-          placeholder="e.g. London, New York, Singapore"
-          autoComplete="address-level2"
+          placeholder="e.g. London Heathrow, Singapore Changi"
+          autoComplete="off"
         />
         {errors.departureCity && (
           <p className="text-xs text-red-500 mt-1">{errors.departureCity}</p>
-        )}
-      </Field>
-
-      {/* Port of Entry */}
-      <Field label="Port of Entry" required>
-        <select
-          className={selectClass("portOfEntry")}
-          value={data.portOfEntry}
-          onChange={(e) => {
-            onChange({ portOfEntry: e.target.value });
-            if (errors.portOfEntry) setErrors({ ...errors, portOfEntry: undefined });
-          }}
-        >
-          <option value="">Select port of entry...</option>
-          {PORTS_OF_ENTRY.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
-        {errors.portOfEntry && (
-          <p className="text-xs text-red-500 mt-1">{errors.portOfEntry}</p>
-        )}
-      </Field>
-
-      {/* Duration of Stay */}
-      <Field label="Duration of Stay (days)" hint="How many days you plan to stay" required>
-        <input
-          type="number"
-          className={inputClass("durationOfStay")}
-          value={data.durationOfStay}
-          onChange={(e) => {
-            onChange({ durationOfStay: e.target.value });
-            if (errors.durationOfStay) setErrors({ ...errors, durationOfStay: undefined });
-          }}
-          placeholder="e.g. 7"
-          min={1}
-          max={90}
-          inputMode="numeric"
-        />
-        {errors.durationOfStay && (
-          <p className="text-xs text-red-500 mt-1">{errors.durationOfStay}</p>
-        )}
-      </Field>
-
-      {/* Purpose of Visit */}
-      <Field label="Purpose of Visit" required>
-        <div className="grid grid-cols-2 gap-2">
-          {PURPOSES_OF_VISIT.map((purpose) => (
-            <button
-              key={purpose}
-              type="button"
-              onClick={() => {
-                onChange({ purposeOfVisit: purpose });
-                if (errors.purposeOfVisit) setErrors({ ...errors, purposeOfVisit: undefined });
-              }}
-              className={`py-2.5 px-3 rounded-xl border-2 text-sm font-medium transition-all text-left ${
-                data.purposeOfVisit === purpose
-                  ? "border-[#003893] bg-[#003893] text-white"
-                  : "border-gray-200 text-gray-600 hover:border-gray-300"
-              }`}
-            >
-              {purpose}
-            </button>
-          ))}
-        </div>
-        {errors.purposeOfVisit && (
-          <p className="text-xs text-red-500 mt-1">{errors.purposeOfVisit}</p>
         )}
       </Field>
 
@@ -297,11 +268,7 @@ export default function TravelStep({ data, onChange, onNext, onBack }: Props) {
       </Field>
 
       {/* Address in Malaysia */}
-      <Field
-        label="Full Address in Malaysia"
-        hint="Street address of your accommodation"
-        required
-      >
+      <Field label="Street Address in Malaysia" required>
         <textarea
           className={`w-full px-4 py-3 rounded-xl border text-base bg-white transition-colors outline-none focus:ring-2 focus:ring-[#003893]/20 focus:border-[#003893] resize-none ${
             errors.addressInMalaysia ? "border-red-400 bg-red-50" : "border-gray-200"
@@ -319,9 +286,9 @@ export default function TravelStep({ data, onChange, onNext, onBack }: Props) {
         )}
       </Field>
 
-      {/* City in Malaysia + Postal Code (side by side) */}
+      {/* City + State + Postal Code */}
       <div className="grid grid-cols-2 gap-3">
-        <Field label="City / State" required>
+        <Field label="City" required>
           <input
             type="text"
             className={inputClass("cityInMalaysia")}
@@ -356,16 +323,26 @@ export default function TravelStep({ data, onChange, onNext, onBack }: Props) {
         </Field>
       </div>
 
-      {/* Accommodation Phone */}
-      <Field label="Accommodation Phone" hint="Phone number of your hotel / host">
-        <input
-          type="tel"
-          className={inputClass("accommodationPhone")}
-          value={data.accommodationPhone}
-          onChange={(e) => onChange({ accommodationPhone: e.target.value })}
-          placeholder="+60312345678"
-          inputMode="tel"
-        />
+      {/* State */}
+      <Field label="State" required>
+        <select
+          className={selectClass("stateInMalaysia")}
+          value={data.stateInMalaysia}
+          onChange={(e) => {
+            onChange({ stateInMalaysia: e.target.value });
+            if (errors.stateInMalaysia) setErrors({ ...errors, stateInMalaysia: undefined });
+          }}
+        >
+          <option value="">Select state...</option>
+          {MALAYSIAN_STATES.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        {errors.stateInMalaysia && (
+          <p className="text-xs text-red-500 mt-1">{errors.stateInMalaysia}</p>
+        )}
       </Field>
 
       {/* Navigation */}

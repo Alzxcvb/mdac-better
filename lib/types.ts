@@ -1,30 +1,28 @@
 export interface FormData {
-  // Personal Info (Step 2a)
+  // Personal Info (Step 1)
   fullName: string;
   passportNumber: string;
   nationality: string;
   dateOfBirth: string;
   sex: "Male" | "Female" | "";
-  countryOfResidence: string;
-  passportIssueDate: string;
-  homeAddress: string;
+  passportType: "Ordinary" | "Official" | "Diplomatic" | "";
+  countryOfPassportIssuance: string;
 
-  // Travel Info (Step 2b)
+  // Travel & Contact Info (Step 2)
   passportExpiry: string;
   email: string;
   phoneCountryCode: string;
   phoneNumber: string;
   arrivalDate: string;
+  departureDate: string;
+  modeOfTransport: "Air" | "Land" | "Sea" | "";
   flightNumber: string;
-  portOfEntry: string;
   departureCity: string;
-  durationOfStay: string;  // number as string for form input
-  purposeOfVisit: string;
   hotelName: string;
   addressInMalaysia: string;
   cityInMalaysia: string;
+  stateInMalaysia: string;
   postalCode: string;
-  accommodationPhone: string;
 
   // Meta
   saveProfile: boolean;
@@ -36,24 +34,22 @@ export const EMPTY_FORM: FormData = {
   nationality: "",
   dateOfBirth: "",
   sex: "",
-  countryOfResidence: "",
-  passportIssueDate: "",
-  homeAddress: "",
+  passportType: "",
+  countryOfPassportIssuance: "",
   passportExpiry: "",
   email: "",
   phoneCountryCode: "+1",
   phoneNumber: "",
   arrivalDate: "",
+  departureDate: "",
+  modeOfTransport: "",
   flightNumber: "",
-  portOfEntry: "",
   departureCity: "",
-  durationOfStay: "",
-  purposeOfVisit: "",
   hotelName: "",
   addressInMalaysia: "",
   cityInMalaysia: "",
+  stateInMalaysia: "",
   postalCode: "",
-  accommodationPhone: "",
   saveProfile: true,
 };
 
@@ -63,9 +59,8 @@ export const PROFILE_FIELDS: (keyof FormData)[] = [
   "nationality",
   "dateOfBirth",
   "sex",
-  "countryOfResidence",
-  "passportIssueDate",
-  "homeAddress",
+  "passportType",
+  "countryOfPassportIssuance",
   "passportExpiry",
   "email",
   "phoneCountryCode",
@@ -127,28 +122,26 @@ export const NATIONALITIES = [
   "Hungarian",
 ];
 
-export const PORTS_OF_ENTRY = [
-  "KLIA (Kuala Lumpur International Airport)",
-  "KLIA2",
-  "Penang International Airport",
-  "Johor Bahru (Woodlands/Tuas Crossing)",
-  "Langkawi International Airport",
-  "Kota Kinabalu International Airport",
-  "Kuching International Airport",
-  "Senai International Airport (Johor)",
-  "Subang Airport (Sultan Abdul Aziz Shah)",
-  "Other",
-];
 
-export const PURPOSES_OF_VISIT = [
-  "Tourism",
-  "Business",
-  "Transit",
-  "Education",
-  "Medical",
-  "Visiting Family/Friends",
-  "Conference/Event",
-  "Other",
+export const MODES_OF_TRANSPORT = ["Air", "Land", "Sea"] as const;
+
+export const MALAYSIAN_STATES = [
+  "Johor",
+  "Kedah",
+  "Kelantan",
+  "Kuala Lumpur",
+  "Labuan",
+  "Melaka",
+  "Negeri Sembilan",
+  "Pahang",
+  "Penang",
+  "Perak",
+  "Perlis",
+  "Putrajaya",
+  "Sabah",
+  "Sarawak",
+  "Selangor",
+  "Terengganu",
 ];
 
 export const PHONE_COUNTRY_CODES = [

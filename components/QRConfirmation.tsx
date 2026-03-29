@@ -25,17 +25,19 @@ export default function QRConfirmation({ data, onNewTrip }: Props) {
   const qrValue = JSON.stringify({
     name: data.fullName,
     passport: data.passportNumber,
+    passportType: data.passportType,
     nationality: data.nationality,
     dob: data.dateOfBirth,
     sex: data.sex,
-    residence: data.countryOfResidence,
+    issuingCountry: data.countryOfPassportIssuance,
     passportExpiry: data.passportExpiry,
     email: data.email,
     phone: `${data.phoneCountryCode}${data.phoneNumber}`,
     arrival: data.arrivalDate,
-    port: data.portOfEntry,
-    purpose: data.purposeOfVisit,
-    address: data.addressInMalaysia,
+    departure: data.departureDate,
+    transport: data.modeOfTransport,
+    flightNo: data.flightNumber,
+    address: `${data.hotelName}, ${data.addressInMalaysia}, ${data.cityInMalaysia}, ${data.stateInMalaysia} ${data.postalCode}`,
   });
 
   const handleDownload = useCallback(() => {
@@ -109,7 +111,7 @@ export default function QRConfirmation({ data, onNewTrip }: Props) {
           <p className="text-blue-200 text-sm">
             Arriving {formatDate(data.arrivalDate)}
           </p>
-          <p className="text-blue-200 text-xs mt-0.5">{data.portOfEntry}</p>
+          <p className="text-blue-200 text-xs mt-0.5">{data.modeOfTransport} — {data.flightNumber}</p>
         </div>
       </div>
 
@@ -158,8 +160,8 @@ export default function QRConfirmation({ data, onNewTrip }: Props) {
             <p className="font-semibold text-gray-900 mt-0.5">{data.nationality}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-400 font-medium">Purpose</p>
-            <p className="font-semibold text-gray-900 mt-0.5">{data.purposeOfVisit}</p>
+            <p className="text-xs text-gray-400 font-medium">Transport</p>
+            <p className="font-semibold text-gray-900 mt-0.5">{data.modeOfTransport} — {data.flightNumber}</p>
           </div>
           <div>
             <p className="text-xs text-gray-400 font-medium">Passport Expiry</p>

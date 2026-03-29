@@ -12,7 +12,8 @@ Return ONLY a JSON object with these exact fields (omit any you cannot read clea
   "dateOfBirth": "YYYY-MM-DD",
   "sex": "Male" or "Female",
   "passportExpiry": "YYYY-MM-DD",
-  "passportIssueDate": "YYYY-MM-DD"
+  "countryOfIssuance": "..." (full country name like "United States", "United Kingdom", "Malaysia", etc.),
+  "passportType": "Ordinary" or "Official" or "Diplomatic"
 }
 
 Return ONLY the JSON. No markdown, no explanation.`;
