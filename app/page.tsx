@@ -94,7 +94,7 @@ export default function LandingPage() {
               { icon: "📷", text: "Scan your passport — auto-fills the entire form" },
               { icon: "📅", text: "Date picker that works (no 60-year scrolling)" },
               { icon: "💾", text: "Profile saved — one tap on your next trip" },
-              { icon: "📱", text: "Actually designed for mobile" },
+              { icon: "📱", text: "Works on your phone — Chrome extensions don't" },
               { icon: "✅", text: "QR code generates every time — no broken links" },
             ].map((item) => (
               <div key={item.text} className="flex items-start gap-2.5">
