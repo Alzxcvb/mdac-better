@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { type FormData, NATIONALITIES } from "@/lib/types";
+import { type FormData } from "@/lib/types";
+import { NATIONALITIES } from "@/lib/mdac-codes";
 
 function parseDOB(value: string): { day: string; month: string; year: string } {
   if (!value) return { day: "", month: "", year: "" };
