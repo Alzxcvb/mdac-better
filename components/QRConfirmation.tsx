@@ -29,7 +29,7 @@ export default function QRConfirmation({ data, onNewTrip }: Props) {
           </svg>
         </div>
         <h2 className="text-2xl font-bold text-gray-900">Your Arrival Card</h2>
-        <p className="text-gray-500 mt-1 text-sm">Ready to present at immigration</p>
+        <p className="text-gray-500 mt-1 text-sm">Review your details, then submit below</p>
       </div>
 
       {/* Traveler info banner */}

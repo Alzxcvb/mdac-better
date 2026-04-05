@@ -8,6 +8,9 @@ import { resetTripFields } from "@/lib/storage";
 
 // ---- Official Submit Section (Multi-step) ----
 
+const MDAC_URL = "https://imigresen-online.imi.gov.my/mdac/main?registerMain";
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || "";
+
 type SubmitPhase = "idle" | "connecting" | "submitting" | "success" | "error";
 
 interface SubmitResult {
@@ -24,6 +27,38 @@ const PHASE_MESSAGES: Record<string, string> = {
   submitting: "Submitting your arrival card...",
 };
 
+function buildMailtoLink(data: FormData): string {
+  const subject = encodeURIComponent(`MDAC Submission — ${data.fullName}`);
+  const body = encodeURIComponent(
+    `Please manually submit this arrival card on the official MDAC site:\n${MDAC_URL}\n\n` +
+    `--- TRAVELER DETAILS ---\n` +
+    `Full Name: ${data.fullName}\n` +
+    `Passport Number: ${data.passportNumber}\n` +
+    `Passport Type: ${data.passportType}\n` +
+    `Nationality: ${data.nationality}\n` +
+    `Date of Birth: ${data.dateOfBirth}\n` +
+    `Sex: ${data.sex}\n` +
+    `Country of Passport Issuance: ${data.countryOfPassportIssuance}\n` +
+    `Place of Birth: ${data.placeOfBirth}\n` +
+    `Passport Expiry: ${data.passportExpiry}\n\n` +
+    `--- TRAVEL DETAILS ---\n` +
+    `Email: ${data.email}\n` +
+    `Phone: ${data.phoneCountryCode}${data.phoneNumber}\n` +
+    `Arrival Date: ${data.arrivalDate}\n` +
+    `Departure Date: ${data.departureDate}\n` +
+    `Mode of Transport: ${data.modeOfTransport}\n` +
+    `Flight/Transport Number: ${data.flightNumber}\n` +
+    `Country of Last Departure: ${data.departureCountry}\n\n` +
+    `--- ADDRESS IN MALAYSIA ---\n` +
+    `Hotel/Address Name: ${data.hotelName}\n` +
+    `Street Address: ${data.addressInMalaysia}\n` +
+    `City: ${data.cityInMalaysia}\n` +
+    `State: ${data.stateInMalaysia}\n` +
+    `Postal Code: ${data.postalCode}\n`
+  );
+  return `mailto:${ADMIN_EMAIL}?subject=${subject}&body=${body}`;
+}
+
 function OfficialSubmitSection({ data }: { data: FormData }) {
   const [phase, setPhase] = useState<SubmitPhase>("idle");
   const [result, setResult] = useState<SubmitResult | null>(null);
@@ -33,7 +68,6 @@ function OfficialSubmitSection({ data }: { data: FormData }) {
     setResult(null);
 
     try {
-      // Step 1: Initialize session with official MDAC server
       const initRes = await fetch("/api/submit-mdac/init", { method: "POST" });
       const initJson = await initRes.json();
 
@@ -41,16 +75,12 @@ function OfficialSubmitSection({ data }: { data: FormData }) {
         throw new Error(initJson.error || "Could not connect to MDAC server");
       }
 
-      // Step 2: Submit the form
       setPhase("submitting");
 
       const submitRes = await fetch("/api/submit-mdac/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          session: initJson.session,
-          formData: data,
-        }),
+        body: JSON.stringify({ session: initJson.session, formData: data }),
       });
 
       const submitJson: SubmitResult = await submitRes.json();
@@ -62,12 +92,92 @@ function OfficialSubmitSection({ data }: { data: FormData }) {
       setResult({
         success: false,
         error: message,
-        fallbackUrl: "https://imigresen-online.imi.gov.my/mdac/main?registerMain",
+        fallbackUrl: MDAC_URL,
       });
       setPhase("error");
     }
   };
 
+  // ---- Success ----
+  if (phase === "success") {
+    return (
+      <div className="bg-green-50 border border-green-200 rounded-2xl p-5 space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-base font-bold text-green-900">Successfully submitted!</p>
+            <p className="text-sm text-green-700">We submitted your arrival card to Malaysia Immigration.</p>
+          </div>
+        </div>
+        <div className="bg-white border border-green-200 rounded-xl p-3">
+          <p className="text-sm text-green-800">
+            Check <strong>{data.email}</strong> for your PIN code from Malaysia Immigration.
+            Use it on the official site to retrieve your border-valid QR code.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ---- Error ----
+  if (phase === "error" && result) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-2xl p-5 space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+            <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-base font-bold text-red-900">Submission failed</p>
+            <p className="text-sm text-red-700">We could not submit your form automatically.</p>
+          </div>
+        </div>
+
+        <p className="text-sm text-red-800">
+          Please submit your arrival card directly on the official Malaysia Immigration website:
+        </p>
+
+        <a
+          href={MDAC_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 w-full bg-[#003893] text-white font-semibold text-sm py-3 rounded-xl transition-all active:scale-95"
+        >
+          <span>Submit on Official MDAC Site</span>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+        </a>
+
+        {ADMIN_EMAIL && (
+          <a
+            href={buildMailtoLink(data)}
+            className="flex items-center justify-center gap-2 w-full bg-white border-2 border-gray-300 text-gray-700 font-semibold text-sm py-3 rounded-xl transition-all active:scale-95"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <span>Email my details to admin</span>
+          </a>
+        )}
+
+        <button
+          onClick={handleSubmit}
+          className="w-full text-gray-500 text-sm py-2 underline"
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  // ---- Idle / Loading ----
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
       <div>
@@ -93,67 +203,12 @@ function OfficialSubmitSection({ data }: { data: FormData }) {
             <div className="w-5 h-5 border-2 border-[#003893] border-t-transparent rounded-full animate-spin flex-shrink-0" />
             <span className="text-sm font-medium text-gray-600">{PHASE_MESSAGES[phase]}</span>
           </div>
-          {/* Progress bar */}
           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-[#003893] rounded-full transition-all duration-1000"
               style={{ width: phase === "connecting" ? "40%" : "80%" }}
             />
           </div>
-        </div>
-      )}
-
-      {phase === "success" && result && (
-        <div className="flex items-start gap-3 bg-green-50 border border-green-200 rounded-xl p-4">
-          <div className="flex-shrink-0 mt-0.5">
-            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-green-800">Submitted successfully!</p>
-            <p className="text-sm text-green-700 mt-1">
-              Check <strong>{data.email}</strong> for your PIN code.
-              Use it on the official MDAC site to retrieve your border-valid QR code.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {phase === "error" && result && (
-        <div className="space-y-3">
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-            <p className="text-sm font-semibold text-amber-800 mb-1">
-              {result.captchaRequired ? "CAPTCHA required" : "Submission issue"}
-            </p>
-            <p className="text-sm text-amber-700">{result.error}</p>
-            {result.partial && (
-              <p className="text-sm text-amber-600 mt-2">
-                Check your email just in case — the submission may have gone through.
-              </p>
-            )}
-          </div>
-
-          {result.fallbackUrl && (
-            <a
-              href={result.fallbackUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full bg-white border-2 border-[#003893] text-[#003893] font-semibold text-sm py-3 rounded-2xl transition-all active:scale-95"
-            >
-              <span>Submit manually on official site</span>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </a>
-          )}
-
-          <button
-            onClick={handleSubmit}
-            className="w-full bg-[#003893] hover:bg-blue-900 text-white font-semibold text-sm py-3 rounded-2xl transition-all active:scale-95"
-          >
-            Try Again
-          </button>
         </div>
       )}
     </div>
