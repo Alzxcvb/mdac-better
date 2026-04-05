@@ -9,7 +9,6 @@ import { resetTripFields } from "@/lib/storage";
 // ---- Official Submit Section (Multi-step) ----
 
 const MDAC_URL = "https://imigresen-online.imi.gov.my/mdac/main?registerMain";
-const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || "";
 
 type SubmitPhase = "idle" | "connecting" | "submitting" | "success" | "error";
 
@@ -27,11 +26,8 @@ const PHASE_MESSAGES: Record<string, string> = {
   submitting: "Submitting your arrival card...",
 };
 
-function buildMailtoLink(data: FormData): string {
-  const subject = encodeURIComponent(`MDAC Submission — ${data.fullName}`);
-  const body = encodeURIComponent(
-    `Please manually submit this arrival card on the official MDAC site:\n${MDAC_URL}\n\n` +
-    `--- TRAVELER DETAILS ---\n` +
+function buildDataSummary(data: FormData): string {
+  return (
     `Full Name: ${data.fullName}\n` +
     `Passport Number: ${data.passportNumber}\n` +
     `Passport Type: ${data.passportType}\n` +
@@ -40,23 +36,90 @@ function buildMailtoLink(data: FormData): string {
     `Sex: ${data.sex}\n` +
     `Country of Passport Issuance: ${data.countryOfPassportIssuance}\n` +
     `Place of Birth: ${data.placeOfBirth}\n` +
-    `Passport Expiry: ${data.passportExpiry}\n\n` +
-    `--- TRAVEL DETAILS ---\n` +
+    `Passport Expiry: ${data.passportExpiry}\n` +
     `Email: ${data.email}\n` +
     `Phone: ${data.phoneCountryCode}${data.phoneNumber}\n` +
     `Arrival Date: ${data.arrivalDate}\n` +
     `Departure Date: ${data.departureDate}\n` +
     `Mode of Transport: ${data.modeOfTransport}\n` +
     `Flight/Transport Number: ${data.flightNumber}\n` +
-    `Country of Last Departure: ${data.departureCountry}\n\n` +
-    `--- ADDRESS IN MALAYSIA ---\n` +
+    `Country of Last Departure: ${data.departureCountry}\n` +
     `Hotel/Address Name: ${data.hotelName}\n` +
     `Street Address: ${data.addressInMalaysia}\n` +
     `City: ${data.cityInMalaysia}\n` +
     `State: ${data.stateInMalaysia}\n` +
-    `Postal Code: ${data.postalCode}\n`
+    `Postal Code: ${data.postalCode}`
   );
-  return `mailto:${ADMIN_EMAIL}?subject=${subject}&body=${body}`;
+}
+
+function DataSummaryCard({ data, summary }: { data: FormData; summary: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(summary).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-bold text-gray-900">Your form data</p>
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1.5 text-xs font-semibold text-[#003893] border border-[#003893] rounded-lg px-3 py-1.5 transition-all active:scale-95"
+        >
+          {copied ? (
+            <>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+              Copied!
+            </>
+          ) : (
+            <>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              Copy all
+            </>
+          )}
+        </button>
+      </div>
+      <p className="text-xs text-gray-500">Screenshot or copy this and send to your admin to submit manually.</p>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+        {[
+          ["Full Name", data.fullName],
+          ["Passport No.", data.passportNumber],
+          ["Passport Type", data.passportType],
+          ["Nationality", data.nationality],
+          ["Date of Birth", data.dateOfBirth],
+          ["Sex", data.sex],
+          ["Issuing Country", data.countryOfPassportIssuance],
+          ["Place of Birth", data.placeOfBirth],
+          ["Passport Expiry", data.passportExpiry],
+          ["Email", data.email],
+          ["Phone", `${data.phoneCountryCode}${data.phoneNumber}`],
+          ["Arrival Date", data.arrivalDate],
+          ["Departure Date", data.departureDate],
+          ["Transport", data.modeOfTransport],
+          ["Flight/Ref No.", data.flightNumber],
+          ["Last Departure", data.departureCountry],
+          ["Hotel/Address", data.hotelName],
+          ["Street", data.addressInMalaysia],
+          ["City", data.cityInMalaysia],
+          ["State", data.stateInMalaysia],
+          ["Postal Code", data.postalCode],
+        ].map(([label, value]) => (
+          <div key={label}>
+            <p className="text-xs text-gray-400">{label}</p>
+            <p className="font-medium text-gray-900 break-words">{value || "—"}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function OfficialSubmitSection({ data }: { data: FormData }) {
@@ -125,54 +188,48 @@ function OfficialSubmitSection({ data }: { data: FormData }) {
 
   // ---- Error ----
   if (phase === "error" && result) {
+    const dataSummary = buildDataSummary(data);
     return (
-      <div className="bg-red-50 border border-red-200 rounded-2xl p-5 space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-            <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      <div className="space-y-3">
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-5 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-base font-bold text-red-900">Submission failed</p>
+              <p className="text-sm text-red-700">We could not submit your form automatically.</p>
+            </div>
+          </div>
+
+          <p className="text-sm text-red-800">
+            Please submit directly on the official Malaysia Immigration website:
+          </p>
+
+          <a
+            href={MDAC_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full bg-[#003893] text-white font-semibold text-sm py-3 rounded-xl transition-all active:scale-95"
+          >
+            <span>Submit on Official MDAC Site</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
-          </div>
-          <div>
-            <p className="text-base font-bold text-red-900">Submission failed</p>
-            <p className="text-sm text-red-700">We could not submit your form automatically.</p>
-          </div>
+          </a>
+
+          <button
+            onClick={handleSubmit}
+            className="w-full text-gray-500 text-sm py-2 underline"
+          >
+            Try again
+          </button>
         </div>
 
-        <p className="text-sm text-red-800">
-          Please submit your arrival card directly on the official Malaysia Immigration website:
-        </p>
-
-        <a
-          href={MDAC_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 w-full bg-[#003893] text-white font-semibold text-sm py-3 rounded-xl transition-all active:scale-95"
-        >
-          <span>Submit on Official MDAC Site</span>
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-          </svg>
-        </a>
-
-        {ADMIN_EMAIL && (
-          <a
-            href={buildMailtoLink(data)}
-            className="flex items-center justify-center gap-2 w-full bg-white border-2 border-gray-300 text-gray-700 font-semibold text-sm py-3 rounded-xl transition-all active:scale-95"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            <span>Email my details to admin</span>
-          </a>
-        )}
-
-        <button
-          onClick={handleSubmit}
-          className="w-full text-gray-500 text-sm py-2 underline"
-        >
-          Try again
-        </button>
+        {/* Data summary — always visible on failure so user can share with admin */}
+        <DataSummaryCard data={data} summary={dataSummary} />
       </div>
     );
   }
