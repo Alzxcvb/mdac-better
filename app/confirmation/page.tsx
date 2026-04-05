@@ -10,7 +10,7 @@ import { resetTripFields } from "@/lib/storage";
 
 const MDAC_URL = "https://imigresen-online.imi.gov.my/mdac/main?registerMain";
 
-type SubmitPhase = "idle" | "connecting" | "submitting" | "success" | "error";
+type SubmitPhase = "idle" | "submitting" | "success" | "error";
 
 interface SubmitResult {
   success: boolean;
@@ -22,7 +22,6 @@ interface SubmitResult {
 }
 
 const PHASE_MESSAGES: Record<string, string> = {
-  connecting: "Connecting to Malaysia immigration...",
   submitting: "Submitting your arrival card...",
 };
 
@@ -127,23 +126,14 @@ function OfficialSubmitSection({ data }: { data: FormData }) {
   const [result, setResult] = useState<SubmitResult | null>(null);
 
   const handleSubmit = async () => {
-    setPhase("connecting");
+    setPhase("submitting");
     setResult(null);
 
     try {
-      const initRes = await fetch("/api/submit-mdac/init", { method: "POST" });
-      const initJson = await initRes.json();
-
-      if (!initRes.ok || !initJson.success) {
-        throw new Error(initJson.error || "Could not connect to MDAC server");
-      }
-
-      setPhase("submitting");
-
       const submitRes = await fetch("/api/submit-mdac/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session: initJson.session, formData: data }),
+        body: JSON.stringify(data),
       });
 
       const submitJson: SubmitResult = await submitRes.json();
@@ -254,7 +244,7 @@ function OfficialSubmitSection({ data }: { data: FormData }) {
         </button>
       )}
 
-      {(phase === "connecting" || phase === "submitting") && (
+      {phase === "submitting" && (
         <div className="space-y-3 py-2">
           <div className="flex items-center gap-3">
             <div className="w-5 h-5 border-2 border-[#003893] border-t-transparent rounded-full animate-spin flex-shrink-0" />
@@ -263,7 +253,7 @@ function OfficialSubmitSection({ data }: { data: FormData }) {
           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-[#003893] rounded-full transition-all duration-1000"
-              style={{ width: phase === "connecting" ? "40%" : "80%" }}
+              style={{ width: "60%" }}
             />
           </div>
         </div>
