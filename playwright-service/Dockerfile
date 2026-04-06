@@ -1,5 +1,5 @@
 # Stage 1: Build
-FROM mcr.microsoft.com/playwright:v1.44.0-jammy AS builder
+FROM mcr.microsoft.com/playwright:v1.59.1-jammy AS builder
 
 WORKDIR /app
 COPY package.json ./
@@ -9,7 +9,7 @@ COPY src/ ./src/
 RUN npm run build
 
 # Stage 2: Production
-FROM mcr.microsoft.com/playwright:v1.44.0-jammy
+FROM mcr.microsoft.com/playwright:v1.59.1-jammy
 
 WORKDIR /app
 COPY package.json ./
