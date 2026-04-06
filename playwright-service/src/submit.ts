@@ -30,7 +30,7 @@ async function getBrowser(): Promise<Browser> {
 
 export async function submitMdac(formData: FormData): Promise<SubmitResult> {
   const browser = await getBrowser();
-  const context = await browser.createBrowserContext();
+  const context = await browser.newContext();
   const page = await context.newPage();
 
   try {

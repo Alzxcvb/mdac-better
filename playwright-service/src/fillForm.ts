@@ -112,18 +112,16 @@ export async function fillAccommodation(page: Page, data: FormData): Promise<voi
     );
 
     // Select city via fuzzy match
-    const cityCode = await page.evaluate((targetCity: string) => {
-      const sel = document.querySelector('select[name="accommodationCity"]') as HTMLSelectElement;
+    const cityCode = await page.evaluate<string, string>((targetCity) => {
+      const sel = document.querySelector('select[name="accommodationCity"]') as HTMLSelectElement | null;
       if (!sel) return "9999";
 
-      const options = Array.from(sel.options);
+      const options = Array.from(sel.options) as HTMLOptionElement[];
       const target = targetCity.toLowerCase().trim();
 
-      // Exact match
       const exact = options.find((o) => o.text.toLowerCase().trim() === target);
       if (exact) return exact.value;
 
-      // Partial match
       const partial = options.find(
         (o) =>
           o.text.toLowerCase().includes(target) ||
@@ -131,7 +129,6 @@ export async function fillAccommodation(page: Page, data: FormData): Promise<voi
       );
       if (partial) return partial.value;
 
-      // Fallback
       return "9999";
     }, data.cityInMalaysia);
 

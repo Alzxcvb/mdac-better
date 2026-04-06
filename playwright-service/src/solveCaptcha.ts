@@ -70,10 +70,9 @@ export async function solveCaptcha(page: Page, maxAttempts: number = 2): Promise
       await page.waitForTimeout(1500);
 
       // Check if successful
-      const success = await page.evaluate(() => {
-        // Check for success indicators
+      const success = await page.evaluate<boolean>(() => {
         const track = document.querySelector('[class*="slider"][class*="success"], [class*="verify"][class*="success"]');
-        const hidden = document.querySelector('input[name="sliderCapture"]') as HTMLInputElement;
+        const hidden = document.querySelector('input[name="sliderCapture"]') as HTMLInputElement | null;
         const noSlider = !document.querySelector('[class*="slider"], [class*="captcha"]');
 
         return !!track || hidden?.value === "true" || noSlider;
