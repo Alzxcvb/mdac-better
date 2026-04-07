@@ -58,11 +58,58 @@ function buildBookmarkletScript(data: FormData): string {
   return `javascript:${encodeURIComponent(script)}`;
 }
 
+type BrowserKey = "firefox" | "safari" | "chrome" | "edge";
+
+const BROWSER_STEPS: Record<BrowserKey, { label: string; canDrag: boolean; steps: string[] }> = {
+  firefox: {
+    label: "Firefox",
+    canDrag: true,
+    steps: [
+      'Drag the <strong>MDAC Autofill</strong> button below directly to your bookmarks bar.',
+      "OR: Right-click bookmarks bar → <strong>Add Bookmark…</strong> → paste the copied code in the <strong>Location</strong> field → Save",
+    ],
+  },
+  safari: {
+    label: "Safari",
+    canDrag: true,
+    steps: [
+      'Drag the <strong>MDAC Autofill</strong> button below directly to your bookmarks bar.',
+      "OR: Bookmarks menu → <strong>Add Bookmark</strong> → after saving, right-click it → Edit Address → paste the copied code → Save",
+    ],
+  },
+  chrome: {
+    label: "Chrome",
+    canDrag: false,
+    steps: [
+      "Right-click your bookmarks bar → <strong>Add page…</strong>",
+      'Name it <strong>MDAC Autofill</strong>, select all in the URL field and <strong>paste the copied code</strong>, then click Save.',
+    ],
+  },
+  edge: {
+    label: "Edge",
+    canDrag: false,
+    steps: [
+      "Right-click your bookmarks bar → <strong>Add favorite</strong>",
+      'Name it <strong>MDAC Autofill</strong>, select all in the URL field and <strong>paste the copied code</strong>, then click Save.',
+    ],
+  },
+};
+
 // ---- Device Submit Section (bookmarklet) ----
 
 function DeviceSubmitSection({ data }: { data: FormData }) {
   const bookmarkletHref = useMemo(() => buildBookmarkletScript(data), [data]);
   const [copied, setCopied] = useState(false);
+  const [browser, setBrowser] = useState<BrowserKey>("chrome");
+
+  // Auto-detect browser on mount
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    if (ua.includes("Edg/")) setBrowser("edge");
+    else if (ua.includes("Firefox/")) setBrowser("firefox");
+    else if (ua.includes("Safari/") && !ua.includes("Chrome")) setBrowser("safari");
+    else setBrowser("chrome");
+  }, []);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(bookmarkletHref).then(() => {
@@ -71,13 +118,35 @@ function DeviceSubmitSection({ data }: { data: FormData }) {
     });
   };
 
+  const { canDrag, steps } = BROWSER_STEPS[browser];
+
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-5">
       <div>
         <h3 className="text-base font-bold text-gray-900">Submit to Official MDAC</h3>
         <p className="text-sm text-gray-500 mt-1">
-          Save a one-click autofill tool to your bookmarks, then use it on the official site.
+          Save a one-click autofill tool to your bookmarks, then use it on the official MDAC site.
         </p>
+      </div>
+
+      {/* Browser selector */}
+      <div className="space-y-1.5">
+        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Your browser</p>
+        <div className="flex gap-2 flex-wrap">
+          {(Object.keys(BROWSER_STEPS) as BrowserKey[]).map((key) => (
+            <button
+              key={key}
+              onClick={() => setBrowser(key)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-all ${
+                browser === key
+                  ? "bg-[#003893] text-white border-[#003893]"
+                  : "bg-white text-gray-600 border-gray-300"
+              }`}
+            >
+              {BROWSER_STEPS[key].label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Step 1 */}
@@ -117,14 +186,31 @@ function DeviceSubmitSection({ data }: { data: FormData }) {
         <span className="flex-shrink-0 w-6 h-6 bg-[#003893] text-white text-xs font-bold rounded-full flex items-center justify-center mt-0.5">2</span>
         <div className="flex-1 space-y-2">
           <p className="text-sm font-semibold text-gray-900">Save it as a bookmark</p>
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-1.5 text-sm text-gray-700">
-            <p className="font-medium text-gray-500 text-xs uppercase tracking-wide">On desktop (Chrome / Safari / Firefox)</p>
-            <ol className="space-y-1 text-sm text-gray-700 list-none">
-              <li>a. Right-click your bookmarks bar → <strong>Add page...</strong></li>
-              <li>b. Name it <strong>MDAC Autofill</strong></li>
-              <li>c. <strong>Select all in the URL field and paste</strong> the code you copied</li>
-              <li>d. Click <strong>Save</strong></li>
-            </ol>
+
+          {/* Drag target — only shown for Firefox / Safari */}
+          {canDrag && (
+            <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border-2 border-dashed border-amber-300 rounded-xl">
+              <span className="text-xs text-amber-700 font-medium flex-1">Drag to bookmarks bar:</span>
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+              <a
+                href={bookmarkletHref}
+                className="flex-shrink-0 bg-[#003893] text-white text-sm font-bold px-4 py-2 rounded-lg select-none cursor-grab active:cursor-grabbing"
+                onClick={(e) => e.preventDefault()}
+                draggable={true}
+              >
+                MDAC Autofill
+              </a>
+            </div>
+          )}
+
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2">
+            {steps.map((step, i) => (
+              <p
+                key={i}
+                className="text-sm text-gray-700"
+                dangerouslySetInnerHTML={{ __html: (canDrag && i === 0 ? "Or: " : "") + step }}
+              />
+            ))}
           </div>
         </div>
       </div>
