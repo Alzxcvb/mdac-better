@@ -1,263 +1,160 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import QRConfirmation from "@/components/QRConfirmation";
 import { type FormData } from "@/lib/types";
 import { resetTripFields } from "@/lib/storage";
-
-// ---- Official Submit Section (Multi-step) ----
+import {
+  NATIONALITY_TO_ISO3,
+  COUNTRY_TO_ISO3,
+  STATE_TO_CODE,
+  TRANSPORT_TO_CODE,
+  SEX_TO_CODE,
+  toMdacDate,
+  phoneCodeToRegion,
+} from "@/lib/mdac-codes";
 
 const MDAC_URL = "https://imigresen-online.imi.gov.my/mdac/main?registerMain";
 
-type SubmitPhase = "idle" | "submitting" | "success" | "error";
+// ---- Bookmarklet builder ----
 
-interface SubmitResult {
-  success: boolean;
-  message?: string;
-  error?: string;
-  fallbackUrl?: string;
-  partial?: boolean;
-  captchaRequired?: boolean;
+function buildBookmarkletScript(data: FormData): string {
+  const natCode = NATIONALITY_TO_ISO3[data.nationality] || "";
+  const pobCode = COUNTRY_TO_ISO3[data.placeOfBirth] || natCode;
+  const stateCode = STATE_TO_CODE[data.stateInMalaysia] || "";
+  const transportCode = TRANSPORT_TO_CODE[data.modeOfTransport] || "";
+  const embarkCode = COUNTRY_TO_ISO3[data.departureCountry] || "";
+  const regionNum = phoneCodeToRegion(data.phoneCountryCode);
+  const sexCode = SEX_TO_CODE[data.sex] || "";
+
+  const payload = {
+    name: data.fullName.toUpperCase().slice(0, 60),
+    passNo: data.passportNumber.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12),
+    dob: toMdacDate(data.dateOfBirth),
+    nationality: natCode,
+    pob: pobCode,
+    sex: sexCode,
+    passExpDte: toMdacDate(data.passportExpiry),
+    email: data.email,
+    confirmEmail: data.email,
+    region: regionNum,
+    mobile: data.phoneNumber.replace(/\D/g, "").slice(0, 12),
+    arrDt: toMdacDate(data.arrivalDate),
+    depDt: toMdacDate(data.departureDate),
+    vesselNm: data.flightNumber.slice(0, 30),
+    trvlMode: transportCode,
+    embark: embarkCode,
+    accommodationStay: "01",
+    accommodationAddress1: data.hotelName.slice(0, 100),
+    accommodationAddress2: data.addressInMalaysia.slice(0, 100),
+    accommodationState: stateCode,
+    accommodationPostcode: data.postalCode.replace(/\D/g, "").slice(0, 5),
+    sCity: data.cityInMalaysia,
+  };
+
+  const script = `(function(){var d=${JSON.stringify(payload)};function sv(n,v){var e=document.querySelector('[name="'+n+'"]');if(!e)return;e.value=v;e.dispatchEvent(new Event('change',{bubbles:true}));e.dispatchEvent(new Event('input',{bubbles:true}));}['name','passNo','dob','passExpDte','email','confirmEmail','region','mobile','arrDt','depDt','vesselNm','accommodationAddress1','accommodationAddress2','accommodationPostcode'].forEach(function(f){sv(f,d[f]);});['nationality','pob','sex','trvlMode','embark','accommodationStay','accommodationState'].forEach(function(f){sv(f,d[f]);});var at=0,iv=setInterval(function(){var ce=document.querySelector('[name="accommodationCity"]');if(!ce){if(++at>30)clearInterval(iv);return;}if(ce.options.length<=1){if(++at>30){clearInterval(iv);alert('Form filled! Please select your city manually, then solve the CAPTCHA and submit.');}return;}for(var i=0;i<ce.options.length;i++){if(ce.options[i].text.toLowerCase().indexOf(d.sCity.toLowerCase())!==-1){ce.value=ce.options[i].value;ce.dispatchEvent(new Event('change',{bubbles:true}));clearInterval(iv);alert('Form filled! Solve the CAPTCHA, then click Submit.');return;}}clearInterval(iv);alert('Form filled! Select city "'+d.sCity+'" manually, then solve the CAPTCHA and submit.');},500);})();`;
+
+  return `javascript:${encodeURIComponent(script)}`;
 }
 
-const PHASE_MESSAGES: Record<string, string> = {
-  submitting: "Submitting your arrival card...",
-};
+// ---- Device Submit Section (bookmarklet) ----
 
-function buildDataSummary(data: FormData): string {
-  return (
-    `Full Name: ${data.fullName}\n` +
-    `Passport Number: ${data.passportNumber}\n` +
-    `Passport Type: ${data.passportType}\n` +
-    `Nationality: ${data.nationality}\n` +
-    `Date of Birth: ${data.dateOfBirth}\n` +
-    `Sex: ${data.sex}\n` +
-    `Country of Passport Issuance: ${data.countryOfPassportIssuance}\n` +
-    `Place of Birth: ${data.placeOfBirth}\n` +
-    `Passport Expiry: ${data.passportExpiry}\n` +
-    `Email: ${data.email}\n` +
-    `Phone: ${data.phoneCountryCode}${data.phoneNumber}\n` +
-    `Arrival Date: ${data.arrivalDate}\n` +
-    `Departure Date: ${data.departureDate}\n` +
-    `Mode of Transport: ${data.modeOfTransport}\n` +
-    `Flight/Transport Number: ${data.flightNumber}\n` +
-    `Country of Last Departure: ${data.departureCountry}\n` +
-    `Hotel/Address Name: ${data.hotelName}\n` +
-    `Street Address: ${data.addressInMalaysia}\n` +
-    `City: ${data.cityInMalaysia}\n` +
-    `State: ${data.stateInMalaysia}\n` +
-    `Postal Code: ${data.postalCode}`
-  );
-}
-
-function DataSummaryCard({ data, summary }: { data: FormData; summary: string }) {
+function DeviceSubmitSection({ data }: { data: FormData }) {
+  const bookmarkletHref = useMemo(() => buildBookmarkletScript(data), [data]);
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(summary).then(() => {
+    navigator.clipboard.writeText(bookmarkletHref).then(() => {
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), 2500);
     });
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-bold text-gray-900">Your form data</p>
-        <button
-          onClick={handleCopy}
-          className="flex items-center gap-1.5 text-xs font-semibold text-[#003893] border border-[#003893] rounded-lg px-3 py-1.5 transition-all active:scale-95"
-        >
-          {copied ? (
-            <>
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-              </svg>
-              Copied!
-            </>
-          ) : (
-            <>
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-              Copy all
-            </>
-          )}
-        </button>
-      </div>
-      <p className="text-xs text-gray-500">Screenshot or copy this and send to your admin to submit manually.</p>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-        {[
-          ["Full Name", data.fullName],
-          ["Passport No.", data.passportNumber],
-          ["Passport Type", data.passportType],
-          ["Nationality", data.nationality],
-          ["Date of Birth", data.dateOfBirth],
-          ["Sex", data.sex],
-          ["Issuing Country", data.countryOfPassportIssuance],
-          ["Place of Birth", data.placeOfBirth],
-          ["Passport Expiry", data.passportExpiry],
-          ["Email", data.email],
-          ["Phone", `${data.phoneCountryCode}${data.phoneNumber}`],
-          ["Arrival Date", data.arrivalDate],
-          ["Departure Date", data.departureDate],
-          ["Transport", data.modeOfTransport],
-          ["Flight/Ref No.", data.flightNumber],
-          ["Last Departure", data.departureCountry],
-          ["Hotel/Address", data.hotelName],
-          ["Street", data.addressInMalaysia],
-          ["City", data.cityInMalaysia],
-          ["State", data.stateInMalaysia],
-          ["Postal Code", data.postalCode],
-        ].map(([label, value]) => (
-          <div key={label}>
-            <p className="text-xs text-gray-400">{label}</p>
-            <p className="font-medium text-gray-900 break-words">{value || "—"}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function OfficialSubmitSection({ data }: { data: FormData }) {
-  const [phase, setPhase] = useState<SubmitPhase>("idle");
-  const [result, setResult] = useState<SubmitResult | null>(null);
-
-  const handleSubmit = async () => {
-    setPhase("submitting");
-    setResult(null);
-
-    try {
-      const submitRes = await fetch("/api/submit-mdac/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      const submitJson: SubmitResult = await submitRes.json();
-      setResult(submitJson);
-      setPhase(submitJson.success ? "success" : "error");
-
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Network error";
-      setResult({
-        success: false,
-        error: message,
-        fallbackUrl: MDAC_URL,
-      });
-      setPhase("error");
-    }
-  };
-
-  // ---- Success ----
-  if (phase === "success") {
-    return (
-      <div className="bg-green-50 border border-green-200 rounded-2xl p-5 space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <div>
-            <p className="text-base font-bold text-green-900">Successfully submitted!</p>
-            <p className="text-sm text-green-700">We submitted your arrival card to Malaysia Immigration.</p>
-          </div>
-        </div>
-        <div className="bg-white border border-green-200 rounded-xl p-3">
-          <p className="text-sm text-green-800">
-            Check <strong>{data.email}</strong> for your PIN code from Malaysia Immigration.
-            Use it on the official site to retrieve your border-valid QR code.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // ---- Error ----
-  if (phase === "error" && result) {
-    const dataSummary = buildDataSummary(data);
-    return (
-      <div className="space-y-3">
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-5 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-base font-bold text-red-900">Submission failed</p>
-              <p className="text-sm text-red-700">We could not submit your form automatically.</p>
-            </div>
-          </div>
-
-          <p className="text-sm text-red-800">
-            Please submit directly on the official Malaysia Immigration website:
-          </p>
-
-          <a
-            href={MDAC_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full bg-[#003893] text-white font-semibold text-sm py-3 rounded-xl transition-all active:scale-95"
-          >
-            <span>Submit on Official MDAC Site</span>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-          </a>
-
-          <button
-            onClick={handleSubmit}
-            className="w-full text-gray-500 text-sm py-2 underline"
-          >
-            Try again
-          </button>
-        </div>
-
-        {/* Data summary — always visible on failure so user can share with admin */}
-        <DataSummaryCard data={data} summary={dataSummary} />
-      </div>
-    );
-  }
-
-  // ---- Idle / Loading ----
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
       <div>
         <h3 className="text-base font-bold text-gray-900">Submit to Official MDAC</h3>
         <p className="text-sm text-gray-500 mt-1">
-          We&apos;ll submit your data directly to Malaysia&apos;s immigration system.
-          You&apos;ll receive a PIN by email to get your official QR code.
+          Use the autofill tool below to fill the official form instantly — then just solve the CAPTCHA and submit.
         </p>
       </div>
 
-      {phase === "idle" && (
-        <button
-          onClick={handleSubmit}
-          className="w-full bg-[#003893] hover:bg-blue-900 text-white font-semibold text-base py-4 rounded-2xl transition-all active:scale-95"
-        >
-          Submit to Official MDAC
-        </button>
-      )}
+      {/* Steps */}
+      <ol className="space-y-2.5">
+        {[
+          { n: 1, text: "Drag the \"MDAC Autofill\" button to your browser's bookmarks bar." },
+          { n: 2, text: "Open the official MDAC site and click the bookmark — your form fills instantly." },
+          { n: 3, text: "Solve the slider CAPTCHA and click Submit. Check your email for the PIN." },
+        ].map(({ n, text }) => (
+          <li key={n} className="flex gap-3 items-start">
+            <span className="flex-shrink-0 w-6 h-6 bg-[#003893] text-white text-xs font-bold rounded-full flex items-center justify-center mt-0.5">
+              {n}
+            </span>
+            <span className="text-sm text-gray-700">{text}</span>
+          </li>
+        ))}
+      </ol>
 
-      {phase === "submitting" && (
-        <div className="space-y-3 py-2">
-          <div className="flex items-center gap-3">
-            <div className="w-5 h-5 border-2 border-[#003893] border-t-transparent rounded-full animate-spin flex-shrink-0" />
-            <span className="text-sm font-medium text-gray-600">{PHASE_MESSAGES[phase]}</span>
-          </div>
-          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-[#003893] rounded-full transition-all duration-1000"
-              style={{ width: "60%" }}
-            />
-          </div>
-        </div>
-      )}
+      {/* Draggable bookmarklet */}
+      <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border-2 border-dashed border-amber-300 rounded-xl">
+        <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
+        </svg>
+        <span className="text-xs text-amber-700 font-medium flex-1">Drag to bookmarks bar:</span>
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a
+          href={bookmarkletHref}
+          className="flex-shrink-0 bg-[#003893] text-white text-sm font-bold px-4 py-2 rounded-lg select-none cursor-grab active:cursor-grabbing"
+          onClick={(e) => {
+            e.preventDefault();
+            alert("Drag this button to your bookmarks bar.\n\nOn mobile: use the \"Copy code\" button below and paste it in the URL bar on the MDAC page.");
+          }}
+          draggable={true}
+        >
+          MDAC Autofill
+        </a>
+      </div>
+
+      {/* Mobile fallback: copy the javascript: URL */}
+      <div className="flex items-center gap-2 text-xs text-gray-500">
+        <div className="flex-1 h-px bg-gray-200" />
+        <span>or on mobile</span>
+        <div className="flex-1 h-px bg-gray-200" />
+      </div>
+      <button
+        onClick={handleCopy}
+        className="flex items-center justify-center gap-2 w-full border border-gray-300 text-gray-700 font-semibold text-sm py-3 rounded-xl transition-all active:scale-95"
+      >
+        {copied ? (
+          <>
+            <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+            </svg>
+            Copied! Paste in URL bar on MDAC page
+          </>
+        ) : (
+          <>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            Copy autofill code
+          </>
+        )}
+      </button>
+
+      {/* Open MDAC */}
+      <a
+        href={MDAC_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2 w-full bg-[#003893] text-white font-semibold text-sm py-3.5 rounded-xl transition-all active:scale-95"
+      >
+        Open Official MDAC Site
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        </svg>
+      </a>
     </div>
   );
 }
@@ -268,7 +165,7 @@ function QRView({ data, onNewTrip }: { data: FormData; onNewTrip: () => void }) 
   return (
     <div className="space-y-4">
       <QRConfirmation data={data} onNewTrip={onNewTrip} />
-      <OfficialSubmitSection data={data} />
+      <DeviceSubmitSection data={data} />
     </div>
   );
 }
