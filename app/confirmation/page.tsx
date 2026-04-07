@@ -67,94 +67,87 @@ function DeviceSubmitSection({ data }: { data: FormData }) {
   const handleCopy = () => {
     navigator.clipboard.writeText(bookmarkletHref).then(() => {
       setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      setTimeout(() => setCopied(false), 15000);
     });
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-5">
       <div>
         <h3 className="text-base font-bold text-gray-900">Submit to Official MDAC</h3>
         <p className="text-sm text-gray-500 mt-1">
-          Use the autofill tool below to fill the official form instantly — then just solve the CAPTCHA and submit.
+          Save a one-click autofill tool to your bookmarks, then use it on the official site.
         </p>
       </div>
 
-      {/* Steps */}
-      <ol className="space-y-2.5">
-        {[
-          { n: 1, text: "Drag the \"MDAC Autofill\" button to your browser's bookmarks bar." },
-          { n: 2, text: "Open the official MDAC site and click the bookmark — your form fills instantly." },
-          { n: 3, text: "Solve the slider CAPTCHA and click Submit. Check your email for the PIN." },
-        ].map(({ n, text }) => (
-          <li key={n} className="flex gap-3 items-start">
-            <span className="flex-shrink-0 w-6 h-6 bg-[#003893] text-white text-xs font-bold rounded-full flex items-center justify-center mt-0.5">
-              {n}
-            </span>
-            <span className="text-sm text-gray-700">{text}</span>
-          </li>
-        ))}
-      </ol>
-
-      {/* Draggable bookmarklet */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border-2 border-dashed border-amber-300 rounded-xl">
-        <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
-        </svg>
-        <span className="text-xs text-amber-700 font-medium flex-1">Drag to bookmarks bar:</span>
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a
-          href={bookmarkletHref}
-          className="flex-shrink-0 bg-[#003893] text-white text-sm font-bold px-4 py-2 rounded-lg select-none cursor-grab active:cursor-grabbing"
-          onClick={(e) => {
-            e.preventDefault();
-            alert("Drag this button to your bookmarks bar.\n\nOn mobile: use the \"Copy code\" button below and paste it in the URL bar on the MDAC page.");
-          }}
-          draggable={true}
-        >
-          MDAC Autofill
-        </a>
+      {/* Step 1 */}
+      <div className="flex gap-3 items-start">
+        <span className="flex-shrink-0 w-6 h-6 bg-[#003893] text-white text-xs font-bold rounded-full flex items-center justify-center mt-0.5">1</span>
+        <div className="flex-1 space-y-2">
+          <p className="text-sm font-semibold text-gray-900">Copy the autofill code</p>
+          <button
+            onClick={handleCopy}
+            className={`flex items-center justify-center gap-2 w-full font-semibold text-sm py-3 rounded-xl transition-all active:scale-95 border ${
+              copied
+                ? "bg-green-50 border-green-300 text-green-700"
+                : "bg-[#003893] border-[#003893] text-white"
+            }`}
+          >
+            {copied ? (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+                Copied!
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                Copy autofill code
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* Mobile fallback: copy the javascript: URL */}
-      <div className="flex items-center gap-2 text-xs text-gray-500">
-        <div className="flex-1 h-px bg-gray-200" />
-        <span>or on mobile</span>
-        <div className="flex-1 h-px bg-gray-200" />
+      {/* Step 2 */}
+      <div className="flex gap-3 items-start">
+        <span className="flex-shrink-0 w-6 h-6 bg-[#003893] text-white text-xs font-bold rounded-full flex items-center justify-center mt-0.5">2</span>
+        <div className="flex-1 space-y-2">
+          <p className="text-sm font-semibold text-gray-900">Save it as a bookmark</p>
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-1.5 text-sm text-gray-700">
+            <p className="font-medium text-gray-500 text-xs uppercase tracking-wide">On desktop (Chrome / Safari / Firefox)</p>
+            <ol className="space-y-1 text-sm text-gray-700 list-none">
+              <li>a. Right-click your bookmarks bar → <strong>Add page...</strong></li>
+              <li>b. Name it <strong>MDAC Autofill</strong></li>
+              <li>c. <strong>Select all in the URL field and paste</strong> the code you copied</li>
+              <li>d. Click <strong>Save</strong></li>
+            </ol>
+          </div>
+        </div>
       </div>
-      <button
-        onClick={handleCopy}
-        className="flex items-center justify-center gap-2 w-full border border-gray-300 text-gray-700 font-semibold text-sm py-3 rounded-xl transition-all active:scale-95"
-      >
-        {copied ? (
-          <>
-            <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-            </svg>
-            Copied! Paste in URL bar on MDAC page
-          </>
-        ) : (
-          <>
+
+      {/* Step 3 */}
+      <div className="flex gap-3 items-start">
+        <span className="flex-shrink-0 w-6 h-6 bg-[#003893] text-white text-xs font-bold rounded-full flex items-center justify-center mt-0.5">3</span>
+        <div className="flex-1 space-y-2">
+          <p className="text-sm font-semibold text-gray-900">Open MDAC and click the bookmark</p>
+          <p className="text-sm text-gray-600">Your form fills in seconds. Solve the slider CAPTCHA, click Submit, and check your email for the PIN.</p>
+          <a
+            href={MDAC_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full border border-gray-300 text-gray-700 font-semibold text-sm py-3 rounded-xl transition-all active:scale-95"
+          >
+            Open Official MDAC Site
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
-            Copy autofill code
-          </>
-        )}
-      </button>
-
-      {/* Open MDAC */}
-      <a
-        href={MDAC_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center justify-center gap-2 w-full bg-[#003893] text-white font-semibold text-sm py-3.5 rounded-xl transition-all active:scale-95"
-      >
-        Open Official MDAC Site
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-        </svg>
-      </a>
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
