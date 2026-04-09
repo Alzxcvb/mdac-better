@@ -5,10 +5,11 @@ import { FormData } from "@/lib/types";
 interface Props {
   data: FormData;
   onNewTrip: () => void;
+  submitted?: boolean;
 }
 
 function formatDate(dateStr: string): string {
-  if (!dateStr) return "—";
+  if (!dateStr) return "\u2014";
   const [year, month, day] = dateStr.split("-");
   const months = [
     "January", "February", "March", "April", "May", "June",
@@ -17,7 +18,7 @@ function formatDate(dateStr: string): string {
   return `${day} ${months[parseInt(month) - 1]} ${year}`;
 }
 
-export default function QRConfirmation({ data, onNewTrip }: Props) {
+export default function QRConfirmation({ data, onNewTrip, submitted = false }: Props) {
 
   return (
     <div className="step-enter">
@@ -28,9 +29,35 @@ export default function QRConfirmation({ data, onNewTrip }: Props) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2 className="text-2xl font-bold text-gray-900">Your Arrival Card</h2>
-        <p className="text-gray-500 mt-1 text-sm">Review your details, then submit below</p>
+        <h2 className="text-2xl font-bold text-gray-900">
+          {submitted ? "Submission Complete" : "Your Arrival Card"}
+        </h2>
+        <p className="text-gray-500 mt-1 text-sm">
+          {submitted
+            ? "Check your email for your confirmation PIN"
+            : "Review your details below"}
+        </p>
       </div>
+
+      {/* Email notice — only after server-side submission */}
+      {submitted && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-blue-900">Check your email</p>
+              <p className="text-xs text-blue-700 mt-0.5">
+                A PIN code has been sent to <strong>{data.email}</strong>.
+                You&apos;ll need this PIN to retrieve your official arrival card QR code.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Traveler info banner */}
       <div className="bg-[#003893] text-white rounded-2xl p-4 mb-6 flex items-center gap-4">
@@ -81,8 +108,17 @@ export default function QRConfirmation({ data, onNewTrip }: Props) {
       {/* Disclaimer */}
       <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3">
         <p className="text-xs text-yellow-800 text-center leading-relaxed">
-          <span className="font-bold">Demo Only.</span> This is a proof-of-concept and not an official
-          Malaysian government document. Not valid for actual immigration use.
+          {submitted ? (
+            <>
+              Your form has been submitted to the official Malaysian Digital Arrival Card system.
+              This tool is <strong>not affiliated</strong> with the Malaysian government.
+            </>
+          ) : (
+            <>
+              <span className="font-bold">Demo Only.</span> This is a proof-of-concept and not an official
+              Malaysian government document.
+            </>
+          )}
         </p>
       </div>
     </div>

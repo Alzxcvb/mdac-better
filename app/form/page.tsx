@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import PersonalStep from "@/components/PersonalStep";
 import TravelStep from "@/components/TravelStep";
 import ReviewStep from "@/components/ReviewStep";
+import SubmitStep from "@/components/SubmitStep";
 import StepIndicator from "@/components/StepIndicator";
 import { FormData, EMPTY_FORM } from "@/lib/types";
 import {
@@ -75,14 +76,20 @@ function FormContent() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
-  // Called when ReviewStep submits — save profile, clear draft, navigate to confirmation
+  // Called when ReviewStep submits — save profile, clear draft, proceed to submit step
   const handleReviewSubmit = useCallback(() => {
     if (formData.saveProfile) {
       saveProfile(formData);
     }
     clearDraft();
+    setStep(4);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [formData]);
+
+  // Called when SubmitStep succeeds — navigate to confirmation
+  const handleSubmitSuccess = useCallback(() => {
     const encoded = encodeURIComponent(JSON.stringify(formData));
-    router.push(`/confirmation?data=${encoded}`);
+    router.push(`/confirmation?data=${encoded}&submitted=true`);
   }, [formData, router]);
 
   if (!initialized) {
@@ -97,8 +104,8 @@ function FormContent() {
     <>
       <StepIndicator
         currentStep={step}
-        totalSteps={3}
-        labels={["Personal", "Travel", "Review"]}
+        totalSteps={4}
+        labels={["Personal", "Travel", "Review", "Submit"]}
       />
 
       <div className="px-6 py-6 max-w-lg mx-auto">
@@ -119,6 +126,16 @@ function FormContent() {
             onChange={handleChange}
             onSubmit={handleReviewSubmit}
             onBack={handleBack}
+          />
+        )}
+        {step === 4 && (
+          <SubmitStep
+            data={formData}
+            onSuccess={handleSubmitSuccess}
+            onBack={() => {
+              setStep(3);
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
           />
         )}
       </div>
