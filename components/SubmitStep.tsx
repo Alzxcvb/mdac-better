@@ -1,8 +1,18 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { type FormData } from "@/lib/types";
-import CaptchaSolver from "./CaptchaSolver";
+import {
+  NATIONALITY_TO_ISO3,
+  COUNTRY_TO_ISO3,
+  STATE_TO_CODE,
+  TRANSPORT_TO_CODE,
+  SEX_TO_CODE,
+  toMdacDate,
+  phoneCodeToRegion,
+} from "@/lib/mdac-codes";
+
+const MDAC_URL = "https://imigresen-online.imi.gov.my/mdac/main?registerMain";
 
 interface Props {
   data: FormData;
@@ -10,221 +20,234 @@ interface Props {
   onBack: () => void;
 }
 
-type Phase = "submitting" | "captcha" | "solving" | "success" | "error";
+type BrowserKey = "firefox" | "safari" | "chrome" | "edge";
 
-interface CaptchaData {
-  sessionId: string;
-  imageBase64: string;
-  width: number;
-  height: number;
+const BROWSER_STEPS: Record<BrowserKey, { label: string; canDrag: boolean; steps: string[] }> = {
+  firefox: {
+    label: "Firefox",
+    canDrag: true,
+    steps: [
+      'Drag the <strong>MDAC Autofill</strong> button below directly to your bookmarks bar.',
+      "OR: Right-click bookmarks bar → <strong>Add Bookmark…</strong> → paste the copied code in the <strong>Location</strong> field → Save",
+    ],
+  },
+  safari: {
+    label: "Safari",
+    canDrag: true,
+    steps: [
+      'Drag the <strong>MDAC Autofill</strong> button below directly to your bookmarks bar.',
+      "OR: Bookmarks menu → <strong>Add Bookmark</strong> → after saving, right-click it → Edit Address → paste the copied code → Save",
+    ],
+  },
+  chrome: {
+    label: "Chrome",
+    canDrag: false,
+    steps: [
+      "Right-click your bookmarks bar → <strong>Add page…</strong>",
+      'Name it <strong>MDAC Autofill</strong>, select all in the URL field and <strong>paste the copied code</strong>, then click Save.',
+    ],
+  },
+  edge: {
+    label: "Edge",
+    canDrag: false,
+    steps: [
+      "Right-click your bookmarks bar → <strong>Add favorite</strong>",
+      'Name it <strong>MDAC Autofill</strong>, select all in the URL field and <strong>paste the copied code</strong>, then click Save.',
+    ],
+  },
+};
+
+function buildBookmarklet(data: FormData): string {
+  const natCode = NATIONALITY_TO_ISO3[data.nationality] || "";
+  const pobCode = COUNTRY_TO_ISO3[data.placeOfBirth] || natCode;
+  const stateCode = STATE_TO_CODE[data.stateInMalaysia] || "";
+  const transportCode = TRANSPORT_TO_CODE[data.modeOfTransport] || "";
+  const embarkCode = COUNTRY_TO_ISO3[data.departureCountry] || "";
+  const regionNum = phoneCodeToRegion(data.phoneCountryCode);
+  const sexCode = SEX_TO_CODE[data.sex] || "";
+
+  const payload = {
+    name: data.fullName.toUpperCase().slice(0, 60),
+    passNo: data.passportNumber.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12),
+    dob: toMdacDate(data.dateOfBirth),
+    nationality: natCode,
+    pob: pobCode,
+    sex: sexCode,
+    passExpDte: toMdacDate(data.passportExpiry),
+    email: data.email,
+    confirmEmail: data.email,
+    region: regionNum,
+    mobile: data.phoneNumber.replace(/\D/g, "").slice(0, 12),
+    arrDt: toMdacDate(data.arrivalDate),
+    depDt: toMdacDate(data.departureDate),
+    vesselNm: data.flightNumber.slice(0, 30),
+    trvlMode: transportCode,
+    embark: embarkCode,
+    accommodationStay: "01",
+    accommodationAddress1: data.hotelName.slice(0, 100),
+    accommodationAddress2: data.addressInMalaysia.slice(0, 100),
+    accommodationState: stateCode,
+    accommodationPostcode: data.postalCode.replace(/\D/g, "").slice(0, 5),
+    sCity: data.cityInMalaysia,
+  };
+
+  const script = `(function(){var d=${JSON.stringify(payload)};function sv(n,v){var e=document.querySelector('[name="'+n+'"]');if(!e)return;e.value=v;e.dispatchEvent(new Event('change',{bubbles:true}));e.dispatchEvent(new Event('input',{bubbles:true}));}['name','passNo','dob','passExpDte','email','confirmEmail','region','mobile','arrDt','depDt','vesselNm','accommodationAddress1','accommodationAddress2','accommodationPostcode'].forEach(function(f){sv(f,d[f]);});['nationality','pob','sex','trvlMode','embark','accommodationStay','accommodationState'].forEach(function(f){sv(f,d[f]);});var at=0,iv=setInterval(function(){var ce=document.querySelector('[name="accommodationCity"]');if(!ce){if(++at>30)clearInterval(iv);return;}if(ce.options.length<=1){if(++at>30){clearInterval(iv);alert('Form filled! Please select your city manually, then solve the CAPTCHA and submit.');}return;}for(var i=0;i<ce.options.length;i++){if(ce.options[i].text.toLowerCase().indexOf(d.sCity.toLowerCase())!==-1){ce.value=ce.options[i].value;ce.dispatchEvent(new Event('change',{bubbles:true}));clearInterval(iv);alert('Form filled! Solve the CAPTCHA, then click Submit.');return;}}clearInterval(iv);alert('Form filled! Select city "'+d.sCity+'" manually, then solve the CAPTCHA and submit.');},500);})();`;
+
+  return `javascript:${encodeURIComponent(script)}`;
 }
 
-export default function SubmitStep({ data, onSuccess, onBack }: Props) {
-  const [phase, setPhase] = useState<Phase>("submitting");
-  const [captcha, setCaptcha] = useState<CaptchaData | null>(null);
-  const [error, setError] = useState<string>("");
-  const [canRetry, setCanRetry] = useState(false);
-
-  // Start the session when this component mounts
-  const startSession = useCallback(async () => {
-    setPhase("submitting");
-    setError("");
-    setCaptcha(null);
-
-    try {
-      const res = await fetch("/api/submit-mdac/start-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      const result = await res.json();
-
-      if (!res.ok || !result.sessionId) {
-        setPhase("error");
-        setError(result.error || "Failed to start submission. Please try again.");
-        setCanRetry(true);
-        return;
-      }
-
-      setCaptcha({
-        sessionId: result.sessionId,
-        imageBase64: result.captchaImageBase64,
-        width: result.captchaWidth,
-        height: result.captchaHeight,
-      });
-      setPhase("captcha");
-    } catch (err) {
-      setPhase("error");
-      setError(err instanceof Error ? err.message : "Network error. Check your connection.");
-      setCanRetry(true);
-    }
-  }, [data]);
+export default function SubmitStep({ data, onBack, onSuccess }: Props) {
+  const bookmarkletHref = useMemo(() => buildBookmarklet(data), [data]);
+  const [copied, setCopied] = useState(false);
+  const [browser, setBrowser] = useState<BrowserKey>("chrome");
 
   useEffect(() => {
-    startSession();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // only on mount
+    const ua = navigator.userAgent;
+    if (ua.includes("Edg/")) setBrowser("edge");
+    else if (ua.includes("Firefox/")) setBrowser("firefox");
+    else if (ua.includes("Safari/") && !ua.includes("Chrome")) setBrowser("safari");
+    else setBrowser("chrome");
+  }, []);
 
-  const handleCaptchaSolve = async (sliderX: number) => {
-    if (!captcha) return;
-    setPhase("solving");
-
-    try {
-      const res = await fetch("/api/submit-mdac/solve-captcha", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: captcha.sessionId,
-          sliderX,
-        }),
-      });
-
-      const result = await res.json();
-
-      if (result.success) {
-        setPhase("success");
-        // Brief pause to show success animation, then navigate
-        setTimeout(() => onSuccess(), 1500);
-        return;
-      }
-
-      // Retryable — new CAPTCHA provided
-      if (result.retryable && result.newCaptchaImageBase64) {
-        setCaptcha({
-          ...captcha,
-          imageBase64: result.newCaptchaImageBase64,
-          width: result.newCaptchaWidth || captcha.width,
-          height: result.newCaptchaHeight || captcha.height,
-        });
-        setPhase("captcha");
-        setError("Verification failed. Try again.");
-        return;
-      }
-
-      // Retryable but no new CAPTCHA — start fresh
-      if (result.retryable) {
-        setError(result.error || "Verification failed. Starting over...");
-        setCanRetry(true);
-        setPhase("error");
-        return;
-      }
-
-      // Non-retryable
-      setPhase("error");
-      setError(result.error || "Submission failed.");
-      setCanRetry(true);
-    } catch (err) {
-      setPhase("error");
-      setError(err instanceof Error ? err.message : "Network error.");
-      setCanRetry(true);
-    }
+  const handleCopy = () => {
+    navigator.clipboard.writeText(bookmarkletHref).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 15000);
+    });
   };
+
+  const { canDrag, steps } = BROWSER_STEPS[browser];
 
   return (
     <div className="step-enter space-y-6">
-      {/* Submitting phase */}
-      {phase === "submitting" && (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-12 h-12 border-3 border-[#003893] border-t-transparent rounded-full animate-spin mb-6" />
-          <h2 className="text-xl font-bold text-gray-900">Submitting Your Form</h2>
-          <p className="text-sm text-gray-500 mt-2 max-w-xs">
-            We&apos;re filling out the official MDAC form for you. This may take a moment...
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-5">
+        <div>
+          <h3 className="text-base font-bold text-gray-900">Submit to Official MDAC</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Use the autofill tool on the official site — your data is pre-loaded, just run it and solve the CAPTCHA.
           </p>
         </div>
-      )}
 
-      {/* CAPTCHA phase */}
-      {phase === "captcha" && captcha && (
-        <div className="space-y-4">
-          <div className="text-center">
-            <h2 className="text-xl font-bold text-gray-900">One More Step</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Solve this verification to complete your submission
-            </p>
-          </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-3">
-              <p className="text-sm text-red-700 text-center">{error}</p>
-            </div>
-          )}
-
-          <CaptchaSolver
-            imageBase64={captcha.imageBase64}
-            width={captcha.width}
-            height={captcha.height}
-            onSolve={handleCaptchaSolve}
-          />
-        </div>
-      )}
-
-      {/* Solving phase */}
-      {phase === "solving" && (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-12 h-12 border-3 border-[#003893] border-t-transparent rounded-full animate-spin mb-6" />
-          <h2 className="text-xl font-bold text-gray-900">Verifying</h2>
-          <p className="text-sm text-gray-500 mt-2">
-            Completing your submission...
-          </p>
-        </div>
-      )}
-
-      {/* Success phase */}
-      {phase === "success" && (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-6">
-            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-bold text-gray-900">Submitted!</h2>
-          <p className="text-sm text-gray-500 mt-2">
-            Check your email for your PIN code.
-          </p>
-        </div>
-      )}
-
-      {/* Error phase */}
-      {phase === "error" && (
-        <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
-            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Something Went Wrong</h2>
-            <p className="text-sm text-gray-500 mt-2 max-w-xs mx-auto">{error}</p>
-          </div>
-          <div className="flex gap-3 w-full max-w-xs">
-            <button
-              onClick={onBack}
-              className="flex-1 bg-white border-2 border-gray-200 text-gray-700 font-semibold text-sm py-3 rounded-xl transition-all active:scale-95"
-            >
-              Go Back
-            </button>
-            {canRetry && (
+        {/* Browser selector */}
+        <div className="space-y-1.5">
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Your browser</p>
+          <div className="flex gap-2 flex-wrap">
+            {(Object.keys(BROWSER_STEPS) as BrowserKey[]).map((key) => (
               <button
-                onClick={startSession}
-                className="flex-1 bg-[#003893] text-white font-semibold text-sm py-3 rounded-xl transition-all active:scale-95"
+                key={key}
+                onClick={() => setBrowser(key)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-all ${
+                  browser === key
+                    ? "bg-[#003893] text-white border-[#003893]"
+                    : "bg-white text-gray-600 border-gray-300"
+                }`}
               >
-                Try Again
+                {BROWSER_STEPS[key].label}
               </button>
-            )}
+            ))}
           </div>
         </div>
-      )}
 
-      {/* Back button — only visible during CAPTCHA phase */}
-      {phase === "captcha" && (
+        {/* Step 1 — Copy code */}
+        <div className="flex gap-3 items-start">
+          <span className="flex-shrink-0 w-6 h-6 bg-[#003893] text-white text-xs font-bold rounded-full flex items-center justify-center mt-0.5">1</span>
+          <div className="flex-1 space-y-2">
+            <p className="text-sm font-semibold text-gray-900">Copy the autofill code</p>
+            <button
+              onClick={handleCopy}
+              className={`flex items-center justify-center gap-2 w-full font-semibold text-sm py-3 rounded-xl transition-all active:scale-95 border ${
+                copied
+                  ? "bg-green-50 border-green-300 text-green-700"
+                  : "bg-[#003893] border-[#003893] text-white"
+              }`}
+            >
+              {copied ? (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  Copy autofill code
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Step 2 — Save bookmark */}
+        <div className="flex gap-3 items-start">
+          <span className="flex-shrink-0 w-6 h-6 bg-[#003893] text-white text-xs font-bold rounded-full flex items-center justify-center mt-0.5">2</span>
+          <div className="flex-1 space-y-2">
+            <p className="text-sm font-semibold text-gray-900">Save it as a bookmark</p>
+
+            {canDrag && (
+              <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border-2 border-dashed border-amber-300 rounded-xl">
+                <span className="text-xs text-amber-700 font-medium flex-1">Drag to bookmarks bar:</span>
+                {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+                <a
+                  href={bookmarkletHref}
+                  className="flex-shrink-0 bg-[#003893] text-white text-sm font-bold px-4 py-2 rounded-lg select-none cursor-grab active:cursor-grabbing"
+                  onClick={(e) => e.preventDefault()}
+                  draggable={true}
+                >
+                  MDAC Autofill
+                </a>
+              </div>
+            )}
+
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2">
+              {steps.map((s, i) => (
+                <p
+                  key={i}
+                  className="text-sm text-gray-700"
+                  dangerouslySetInnerHTML={{ __html: (canDrag && i === 0 ? "Or: " : "") + s }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Step 3 — Open MDAC */}
+        <div className="flex gap-3 items-start">
+          <span className="flex-shrink-0 w-6 h-6 bg-[#003893] text-white text-xs font-bold rounded-full flex items-center justify-center mt-0.5">3</span>
+          <div className="flex-1 space-y-2">
+            <p className="text-sm font-semibold text-gray-900">Open MDAC and click the bookmark</p>
+            <p className="text-sm text-gray-600">Your form fills in seconds. Solve the slider CAPTCHA, click Submit, and check your email for the PIN.</p>
+            <a
+              href={MDAC_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 w-full border border-gray-300 text-gray-700 font-semibold text-sm py-3 rounded-xl transition-all active:scale-95"
+            >
+              Open Official MDAC Site
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex gap-3">
         <button
           onClick={onBack}
-          className="w-full bg-white border-2 border-gray-200 text-gray-700 font-semibold text-sm py-3 rounded-xl transition-all active:scale-95"
+          className="flex-1 bg-white border-2 border-gray-200 text-gray-700 font-semibold text-sm py-3 rounded-xl transition-all active:scale-95"
         >
-          Back to Review
+          Back
         </button>
-      )}
+        <button
+          onClick={onSuccess}
+          className="flex-1 bg-[#003893] text-white font-semibold text-sm py-3 rounded-xl transition-all active:scale-95"
+        >
+          Done — I submitted ✓
+        </button>
+      </div>
     </div>
   );
 }
