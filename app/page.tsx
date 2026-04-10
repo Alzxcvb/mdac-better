@@ -30,18 +30,35 @@ export default function LandingPage() {
       {/* Header bar */}
       <div className="bg-[#003893] text-white px-4 py-3 flex items-center gap-3">
         <div className="flex items-center gap-2">
-          {/* Malaysian flag stripes mini icon */}
-          <div className="w-8 h-6 rounded overflow-hidden border border-white/20 flex-shrink-0">
-            <div className="h-full flex flex-col">
-              {[...Array(14)].map((_, i) => (
-                <div
-                  key={i}
-                  className="flex-1"
-                  style={{ background: i % 2 === 0 ? "#CC0001" : "#FFFFFF" }}
-                />
-              ))}
-            </div>
-          </div>
+          {/* Malaysian flag (Jalur Gemilang) */}
+          <svg
+            viewBox="0 0 20 10"
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-8 h-5 rounded-sm overflow-hidden flex-shrink-0 border border-white/20"
+            aria-label="Malaysian flag"
+          >
+            {/* 14 alternating red/white stripes */}
+            {Array.from({ length: 14 }, (_, i) => (
+              <rect
+                key={i}
+                x="0"
+                y={i * (10 / 14)}
+                width="20"
+                height={10 / 14 + 0.05}
+                fill={i % 2 === 0 ? "#CC0001" : "#FFFFFF"}
+              />
+            ))}
+            {/* Blue canton — upper-left, half width, 8 stripes tall */}
+            <rect x="0" y="0" width="10" height={80 / 14} fill="#003893" />
+            {/* Yellow crescent moon */}
+            <circle cx="3.7" cy="2.857" r="1.85" fill="#FFD100" />
+            <circle cx="4.55" cy="2.857" r="1.42" fill="#003893" />
+            {/* Yellow 14-pointed star */}
+            <polygon
+              fill="#FFD100"
+              points="7.5,1.81 7.60,2.43 7.96,1.91 7.77,2.51 8.32,2.20 7.90,2.67 8.52,2.62 7.94,2.86 8.52,3.09 7.90,3.05 8.32,3.51 7.77,3.20 7.96,3.80 7.60,3.29 7.5,3.91 7.40,3.29 7.05,3.80 7.23,3.20 6.68,3.51 7.10,3.05 6.48,3.09 7.06,2.86 6.48,2.62 7.10,2.67 6.68,2.20 7.23,2.51 7.05,1.91 7.40,2.43"
+            />
+          </svg>
           <span className="text-sm font-medium tracking-wide uppercase opacity-80">
             Malaysia
           </span>
