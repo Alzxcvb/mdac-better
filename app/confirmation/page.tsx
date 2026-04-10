@@ -14,18 +14,18 @@ function ConfirmationContent() {
   const wasSubmitted = searchParams.get("submitted") === "true";
 
   useEffect(() => {
-    const raw = searchParams.get("data");
+    const raw = sessionStorage.getItem("mdac_confirmation");
     if (!raw) {
       setError(true);
       return;
     }
     try {
-      const parsed = JSON.parse(decodeURIComponent(raw)) as FormData;
+      const parsed = JSON.parse(raw) as FormData;
       setFormData(parsed);
     } catch {
       setError(true);
     }
-  }, [searchParams]);
+  }, []);
 
   const handleNewTrip = () => {
     if (!formData) {
@@ -33,8 +33,8 @@ function ConfirmationContent() {
       return;
     }
     const reset = resetTripFields(formData);
-    const encoded = encodeURIComponent(JSON.stringify(reset));
-    router.push(`/form?mode=trip&draft=${encoded}`);
+    sessionStorage.setItem("mdac_trip_draft", JSON.stringify(reset));
+    router.push("/form?mode=trip");
   };
 
   if (error) {

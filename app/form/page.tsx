@@ -34,13 +34,13 @@ function FormContent() {
       const prefilled = buildNewFormFromProfile();
       setFormData(prefilled);
     } else if (mode === "trip") {
-      // Returning from confirmation page — draft passed in URL
-      const draftParam = searchParams.get("draft");
-      if (draftParam) {
+      const draftJson = sessionStorage.getItem("mdac_trip_draft");
+      if (draftJson) {
         try {
-          const parsed = JSON.parse(decodeURIComponent(draftParam)) as FormData;
+          const parsed = JSON.parse(draftJson) as FormData;
           setFormData(parsed);
           saveDraft(parsed);
+          sessionStorage.removeItem("mdac_trip_draft");
         } catch {
           setFormData({ ...EMPTY_FORM });
         }
@@ -88,8 +88,8 @@ function FormContent() {
 
   // Called when SubmitStep succeeds — navigate to confirmation
   const handleSubmitSuccess = useCallback(() => {
-    const encoded = encodeURIComponent(JSON.stringify(formData));
-    router.push(`/confirmation?data=${encoded}&submitted=true`);
+    sessionStorage.setItem("mdac_confirmation", JSON.stringify(formData));
+    router.push("/confirmation?submitted=true");
   }, [formData, router]);
 
   if (!initialized) {
