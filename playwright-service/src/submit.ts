@@ -13,8 +13,15 @@ interface SubmitResult {
 }
 
 let browser: Browser | null = null;
+let browserUseCount = 0;
+const MAX_BROWSER_USES = 20;
 
 async function getBrowser(): Promise<Browser> {
+  if (browser && browserUseCount >= MAX_BROWSER_USES) {
+    await browser.close().catch(() => {});
+    browser = null;
+    browserUseCount = 0;
+  }
   if (!browser) {
     browser = await chromium.launch({
       headless: true,
@@ -24,7 +31,9 @@ async function getBrowser(): Promise<Browser> {
         "--disable-dev-shm-usage",
       ],
     });
+    browserUseCount = 0;
   }
+  browserUseCount++;
   return browser;
 }
 
@@ -34,7 +43,7 @@ export async function submitMdac(formData: FormData): Promise<SubmitResult> {
   const page = await context.newPage();
 
   try {
-    console.log(`Starting MDAC submission for ${formData.fullName}...`);
+    console.log("Starting MDAC submission...");
 
     // Navigate to form
     console.log("Navigating to MDAC form...");
@@ -88,7 +97,7 @@ export async function submitMdac(formData: FormData): Promise<SubmitResult> {
     if (isSuccess) {
       return {
         success: true,
-        message: `Submitted successfully! Check ${formData.email} for your PIN code from Malaysia Immigration.`,
+        message: "Submitted successfully! Check your email for your PIN code from Malaysia Immigration.",
       };
     }
 

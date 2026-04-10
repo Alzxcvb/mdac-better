@@ -6,10 +6,38 @@ import { submitMdac } from "./submit";
 const app = express();
 app.use(express.json({ limit: "1mb" }));
 
+// Simple in-memory rate limiting
+const requestCounts = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT = 10; // max requests per window
+const RATE_WINDOW = 60_000; // 1 minute
+
+function rateLimit(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
+  const now = Date.now();
+  const record = requestCounts.get(ip);
+
+  if (!record || now > record.resetTime) {
+    requestCounts.set(ip, { count: 1, resetTime: now + RATE_WINDOW });
+    return next();
+  }
+
+  if (record.count >= RATE_LIMIT) {
+    return res.status(429).json({ error: "Too many requests. Please try again later." });
+  }
+
+  record.count++;
+  return next();
+}
+
+app.use("/submit", rateLimit);
+
 // Auth middleware
 app.use("/submit", (req, res, next) => {
   const secret = process.env.PLAYWRIGHT_SERVICE_SECRET;
-  if (secret && req.headers.authorization !== `Bearer ${secret}`) {
+  if (!secret) {
+    return res.status(500).json({ error: "Server misconfigured: PLAYWRIGHT_SERVICE_SECRET is required" });
+  }
+  if (req.headers.authorization !== `Bearer ${secret}`) {
     return res.status(401).json({ error: "Unauthorized" });
   }
   next();
@@ -21,7 +49,12 @@ app.get("/health", (_req, res) => {
 
 // Debug: navigate to MDAC and return a screenshot + page title
 // Shows exactly what Playwright sees so we can diagnose connectivity/form issues
-app.get("/debug", async (_req, res) => {
+app.get("/debug", async (req, res) => {
+  const secret = process.env.PLAYWRIGHT_SERVICE_SECRET;
+  if (secret && req.headers.authorization !== `Bearer ${secret}`) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
   const MDAC_URL = "https://imigresen-online.imi.gov.my/mdac/main?registerMain";
   const browser = await chromium.launch({
     headless: true,
@@ -60,7 +93,7 @@ app.post("/submit", async (req, res) => {
   const formData = req.body as FormData;
 
   try {
-    console.log(`Received submission request for ${formData.fullName}`);
+    console.log("Received submission request");
     const result = await submitMdac(formData);
     res.json(result);
   } catch (err) {
