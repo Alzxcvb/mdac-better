@@ -40,7 +40,17 @@ export async function POST(req: NextRequest) {
       signal: AbortSignal.timeout(115_000),
     });
 
-    const data = await res.json();
+    const text = await res.text();
+    let data: unknown;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      // Railway returned an HTML error page (502/503 during cold start, etc.)
+      return NextResponse.json(
+        { success: false, error: `Backend unavailable (HTTP ${res.status}). Please try again in a moment.` },
+        { status: 502 }
+      );
+    }
     return NextResponse.json(data, { status: res.ok ? 200 : res.status });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Unknown error";
