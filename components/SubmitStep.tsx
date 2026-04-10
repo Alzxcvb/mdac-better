@@ -20,44 +20,7 @@ interface Props {
   onBack: () => void;
 }
 
-type BrowserKey = "firefox" | "safari" | "chrome" | "edge";
-
-const BROWSER_STEPS: Record<BrowserKey, { label: string; canDrag: boolean; steps: string[] }> = {
-  firefox: {
-    label: "Firefox",
-    canDrag: true,
-    steps: [
-      'Drag the <strong>MDAC Autofill</strong> button below directly to your bookmarks bar.',
-      "OR: Right-click bookmarks bar → <strong>Add Bookmark…</strong> → paste the copied code in the <strong>Location</strong> field → Save",
-    ],
-  },
-  safari: {
-    label: "Safari",
-    canDrag: true,
-    steps: [
-      'Drag the <strong>MDAC Autofill</strong> button below directly to your bookmarks bar.',
-      "OR: Bookmarks menu → <strong>Add Bookmark</strong> → after saving, right-click it → Edit Address → paste the copied code → Save",
-    ],
-  },
-  chrome: {
-    label: "Chrome",
-    canDrag: false,
-    steps: [
-      "Right-click your bookmarks bar → <strong>Add page…</strong>",
-      'Name it <strong>MDAC Autofill</strong>, select all in the URL field and <strong>paste the copied code</strong>, then click Save.',
-    ],
-  },
-  edge: {
-    label: "Edge",
-    canDrag: false,
-    steps: [
-      "Right-click your bookmarks bar → <strong>Add favorite</strong>",
-      'Name it <strong>MDAC Autofill</strong>, select all in the URL field and <strong>paste the copied code</strong>, then click Save.',
-    ],
-  },
-};
-
-function buildBookmarklet(data: FormData): string {
+function buildScript(data: FormData): string {
   const natCode = NATIONALITY_TO_ISO3[data.nationality] || "";
   const pobCode = COUNTRY_TO_ISO3[data.placeOfBirth] || natCode;
   const stateCode = STATE_TO_CODE[data.stateInMalaysia] || "";
@@ -91,102 +54,138 @@ function buildBookmarklet(data: FormData): string {
     sCity: data.cityInMalaysia,
   };
 
-  const script = `(function(){var d=${JSON.stringify(payload)};function sv(n,v){var e=document.querySelector('[name="'+n+'"]');if(!e)return;e.value=v;var ev=['change','input'];ev.forEach(function(t){e.dispatchEvent(new Event(t,{bubbles:true}));});if(window.jQuery){window.jQuery(e).trigger('change').trigger('input');}}['name','passNo','dob','passExpDte','email','confirmEmail','region','mobile','arrDt','depDt','vesselNm','accommodationAddress1','accommodationAddress2','accommodationPostcode'].forEach(function(f){sv(f,d[f]);});['nationality','pob','sex','trvlMode','embark','accommodationStay','accommodationState'].forEach(function(f){sv(f,d[f]);});var at=0,iv=setInterval(function(){var ce=document.querySelector('[name="accommodationCity"]');if(!ce){if(++at>30)clearInterval(iv);return;}if(ce.options.length<=1){if(++at>30){clearInterval(iv);alert('Form filled! Please select your city manually, then solve the CAPTCHA and submit.');}return;}for(var i=0;i<ce.options.length;i++){if(ce.options[i].text.toLowerCase().indexOf(d.sCity.toLowerCase())!==-1){ce.value=ce.options[i].value;ce.dispatchEvent(new Event('change',{bubbles:true}));if(window.jQuery)window.jQuery(ce).trigger('change');clearInterval(iv);alert('Form filled! Solve the CAPTCHA, then click Submit.');return;}}clearInterval(iv);alert('Form filled! Select city "'+d.sCity+'" manually, then solve the CAPTCHA and submit.');},500);})();`;
-
-  return `javascript:${encodeURIComponent(script)}`;
+  return `(function(){var d=${JSON.stringify(payload)};function sv(n,v){var e=document.querySelector('[name="'+n+'"]');if(!e)return;e.value=v;var ev=['change','input'];ev.forEach(function(t){e.dispatchEvent(new Event(t,{bubbles:true}));});if(window.jQuery){window.jQuery(e).trigger('change').trigger('input');}}['name','passNo','dob','passExpDte','email','confirmEmail','region','mobile','arrDt','depDt','vesselNm','accommodationAddress1','accommodationAddress2','accommodationPostcode'].forEach(function(f){sv(f,d[f]);});['nationality','pob','sex','trvlMode','embark','accommodationStay','accommodationState'].forEach(function(f){sv(f,d[f]);});var at=0,iv=setInterval(function(){var ce=document.querySelector('[name="accommodationCity"]');if(!ce){if(++at>30)clearInterval(iv);return;}if(ce.options.length<=1){if(++at>30){clearInterval(iv);alert('Form filled! Please select your city manually, then solve the CAPTCHA and submit.');}return;}for(var i=0;i<ce.options.length;i++){if(ce.options[i].text.toLowerCase().indexOf(d.sCity.toLowerCase())!==-1){ce.value=ce.options[i].value;ce.dispatchEvent(new Event('change',{bubbles:true}));if(window.jQuery)window.jQuery(ce).trigger('change');clearInterval(iv);alert('Form filled! Solve the CAPTCHA, then click Submit.');return;}}clearInterval(iv);alert('Form filled! Select city "'+d.sCity+'" manually, then solve the CAPTCHA and submit.');},500);})();`;
 }
 
 export default function SubmitStep({ data, onBack, onSuccess }: Props) {
-  const bookmarkletHref = useMemo(() => buildBookmarklet(data), [data]);
+  const script = useMemo(() => buildScript(data), [data]);
+  const bookmarkletHref = useMemo(() => `javascript:${encodeURIComponent(script)}`, [script]);
+
   const [copied, setCopied] = useState(false);
-  const [browser, setBrowser] = useState<BrowserKey>("chrome");
+  const [showBookmark, setShowBookmark] = useState(false);
+  const [isMac, setIsMac] = useState(false);
 
   useEffect(() => {
-    const ua = navigator.userAgent;
-    if (ua.includes("Edg/")) setBrowser("edge");
-    else if (ua.includes("Firefox/")) setBrowser("firefox");
-    else if (ua.includes("Safari/") && !ua.includes("Chrome")) setBrowser("safari");
-    else setBrowser("chrome");
+    setIsMac(navigator.platform.toUpperCase().includes("MAC"));
   }, []);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(bookmarkletHref).then(() => {
+  const handleOpenAndCopy = () => {
+    navigator.clipboard.writeText(script).then(() => {
       setCopied(true);
-      setTimeout(() => setCopied(false), 15000);
+      setTimeout(() => setCopied(false), 30000);
     });
+    window.open(MDAC_URL, "_blank", "noopener,noreferrer");
   };
 
-  const { canDrag, steps } = BROWSER_STEPS[browser];
+  const consoleShortcut = isMac ? "Cmd + Option + J" : "Ctrl + Shift + J";
 
   return (
-    <div className="step-enter space-y-6">
+    <div className="step-enter space-y-4">
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-5">
         <div>
-          <h3 className="text-base font-bold text-gray-900">Submit to Official MDAC</h3>
+          <h3 className="text-base font-bold text-gray-900">Auto-fill the MDAC form</h3>
           <p className="text-sm text-gray-500 mt-1">
-            Use the autofill tool on the official site — your data is pre-loaded, just run it and solve the CAPTCHA.
+            We&apos;ll fill in all your details automatically — you just solve the CAPTCHA.
           </p>
         </div>
 
-        {/* Browser selector */}
-        <div className="space-y-1.5">
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">Your browser</p>
-          <div className="flex gap-2 flex-wrap">
-            {(Object.keys(BROWSER_STEPS) as BrowserKey[]).map((key) => (
-              <button
-                key={key}
-                onClick={() => setBrowser(key)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-semibold border transition-all ${
-                  browser === key
-                    ? "bg-[#003893] text-white border-[#003893]"
-                    : "bg-white text-gray-600 border-gray-300"
-                }`}
-              >
-                {BROWSER_STEPS[key].label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Step 1 — Copy code */}
+        {/* Step 1 */}
         <div className="flex gap-3 items-start">
           <span className="flex-shrink-0 w-6 h-6 bg-[#003893] text-white text-xs font-bold rounded-full flex items-center justify-center mt-0.5">1</span>
           <div className="flex-1 space-y-2">
-            <p className="text-sm font-semibold text-gray-900">Copy the autofill code</p>
+            <p className="text-sm font-semibold text-gray-900">Open the MDAC form</p>
             <button
-              onClick={handleCopy}
-              className={`flex items-center justify-center gap-2 w-full font-semibold text-sm py-3 rounded-xl transition-all active:scale-95 border ${
-                copied
-                  ? "bg-green-50 border-green-300 text-green-700"
-                  : "bg-[#003893] border-[#003893] text-white"
-              }`}
+              onClick={handleOpenAndCopy}
+              className="flex items-center justify-center gap-2 w-full bg-[#003893] text-white font-semibold text-sm py-3 rounded-xl transition-all active:scale-95"
             >
-              {copied ? (
-                <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Copied!
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                  Copy autofill code
-                </>
-              )}
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              Open MDAC &amp; Copy Fill Code
             </button>
+            {copied && (
+              <p className="text-xs text-green-700 font-medium flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+                Fill code copied to clipboard!
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Step 2 — Save bookmark */}
+        {/* Step 2 */}
         <div className="flex gap-3 items-start">
           <span className="flex-shrink-0 w-6 h-6 bg-[#003893] text-white text-xs font-bold rounded-full flex items-center justify-center mt-0.5">2</span>
           <div className="flex-1 space-y-2">
-            <p className="text-sm font-semibold text-gray-900">Save it as a bookmark</p>
+            <p className="text-sm font-semibold text-gray-900">Open the browser console</p>
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2">
+              <p className="text-sm text-gray-700">
+                In the MDAC tab, press{" "}
+                <kbd className="bg-gray-200 text-gray-800 text-xs font-mono px-1.5 py-0.5 rounded">{consoleShortcut}</kbd>
+              </p>
+              <p className="text-xs text-gray-500">
+                This opens DevTools. Click the <strong>Console</strong> tab at the top.
+              </p>
+            </div>
+          </div>
+        </div>
 
-            {canDrag && (
+        {/* Step 3 */}
+        <div className="flex gap-3 items-start">
+          <span className="flex-shrink-0 w-6 h-6 bg-[#003893] text-white text-xs font-bold rounded-full flex items-center justify-center mt-0.5">3</span>
+          <div className="flex-1 space-y-2">
+            <p className="text-sm font-semibold text-gray-900">Paste and press Enter</p>
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2">
+              <p className="text-sm text-gray-700">
+                Click in the console, paste with{" "}
+                <kbd className="bg-gray-200 text-gray-800 text-xs font-mono px-1.5 py-0.5 rounded">
+                  {isMac ? "Cmd+V" : "Ctrl+V"}
+                </kbd>
+                , then press{" "}
+                <kbd className="bg-gray-200 text-gray-800 text-xs font-mono px-1.5 py-0.5 rounded">Enter</kbd>.
+              </p>
+              <p className="text-xs text-gray-500">The form fills instantly. A dialog will confirm when it&apos;s done.</p>
+            </div>
+            {!copied && (
+              <button
+                onClick={() => navigator.clipboard.writeText(script).then(() => { setCopied(true); setTimeout(() => setCopied(false), 30000); })}
+                className="text-xs text-[#003893] font-semibold underline underline-offset-2"
+              >
+                Didn&apos;t copy yet? Copy fill code
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Step 4 */}
+        <div className="flex gap-3 items-start">
+          <span className="flex-shrink-0 w-6 h-6 bg-[#003893] text-white text-xs font-bold rounded-full flex items-center justify-center mt-0.5">4</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-gray-900">Solve the CAPTCHA and submit</p>
+            <p className="text-sm text-gray-500 mt-0.5">Slide the CAPTCHA, click Submit, and check your email for the PIN.</p>
+          </div>
+        </div>
+
+        {/* Bookmark alternative — collapsed */}
+        <div className="border-t border-gray-100 pt-3">
+          <button
+            onClick={() => setShowBookmark(!showBookmark)}
+            className="text-xs text-gray-400 font-medium flex items-center gap-1"
+          >
+            <svg className={`w-3.5 h-3.5 transition-transform ${showBookmark ? "rotate-90" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+            Prefer a bookmark instead? (Advanced)
+          </button>
+
+          {showBookmark && (
+            <div className="mt-3 space-y-3">
+              <p className="text-xs text-gray-500">
+                Save a bookmark once and click it every time — no console needed.
+              </p>
+
+              {/* Drag target */}
               <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border-2 border-dashed border-amber-300 rounded-xl">
                 <span className="text-xs text-amber-700 font-medium flex-1">Drag to bookmarks bar:</span>
                 {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
@@ -199,38 +198,23 @@ export default function SubmitStep({ data, onBack, onSuccess }: Props) {
                   MDAC Autofill
                 </a>
               </div>
-            )}
 
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2">
-              {steps.map((s, i) => (
-                <p
-                  key={i}
-                  className="text-sm text-gray-700"
-                  dangerouslySetInnerHTML={{ __html: (canDrag && i === 0 ? "Or: " : "") + s }}
-                />
-              ))}
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2">
+                <p className="text-xs font-semibold text-gray-600">Can&apos;t drag? (Chrome / Edge)</p>
+                <ol className="text-xs text-gray-600 space-y-1 list-decimal list-inside">
+                  <li>Right-click your bookmarks bar → <strong>Add page…</strong> (or <strong>Add favorite</strong>)</li>
+                  <li>Name it <strong>MDAC Autofill</strong>, then select all in the URL field and paste the copied code.</li>
+                  <li>Save — then click the bookmark on the MDAC form page.</li>
+                </ol>
+                <button
+                  onClick={() => navigator.clipboard.writeText(bookmarkletHref).then(() => { setCopied(true); setTimeout(() => setCopied(false), 30000); })}
+                  className="text-xs text-[#003893] font-semibold underline underline-offset-2"
+                >
+                  Copy bookmark code
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-
-        {/* Step 3 — Open MDAC */}
-        <div className="flex gap-3 items-start">
-          <span className="flex-shrink-0 w-6 h-6 bg-[#003893] text-white text-xs font-bold rounded-full flex items-center justify-center mt-0.5">3</span>
-          <div className="flex-1 space-y-2">
-            <p className="text-sm font-semibold text-gray-900">Open MDAC and click the bookmark</p>
-            <p className="text-sm text-gray-600">Your form fills in seconds. Solve the slider CAPTCHA, click Submit, and check your email for the PIN.</p>
-            <a
-              href={MDAC_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full border border-gray-300 text-gray-700 font-semibold text-sm py-3 rounded-xl transition-all active:scale-95"
-            >
-              Open Official MDAC Site
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </a>
-          </div>
+          )}
         </div>
       </div>
 
