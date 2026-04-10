@@ -51,7 +51,10 @@ app.get("/health", (_req, res) => {
 // Shows exactly what Playwright sees so we can diagnose connectivity/form issues
 app.get("/debug", async (req, res) => {
   const secret = process.env.PLAYWRIGHT_SERVICE_SECRET;
-  if (secret && req.headers.authorization !== `Bearer ${secret}`) {
+  if (!secret) {
+    return res.status(500).json({ error: "Server misconfigured: PLAYWRIGHT_SERVICE_SECRET is required" });
+  }
+  if (req.headers.authorization !== `Bearer ${secret}`) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
