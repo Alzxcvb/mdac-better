@@ -64,9 +64,14 @@ export default function SubmitStep({ data, onBack, onSuccess }: Props) {
   const [copied, setCopied] = useState(false);
   const [showBookmark, setShowBookmark] = useState(false);
   const [isMac, setIsMac] = useState(false);
+  const [isFirefox, setIsFirefox] = useState(false);
+  const [isSafari, setIsSafari] = useState(false);
 
   useEffect(() => {
+    const ua = navigator.userAgent;
     setIsMac(navigator.platform.toUpperCase().includes("MAC"));
+    setIsFirefox(ua.includes("Firefox/"));
+    setIsSafari(ua.includes("Safari/") && !ua.includes("Chrome") && !ua.includes("Edg/"));
   }, []);
 
   const handleOpenAndCopy = () => {
@@ -77,7 +82,20 @@ export default function SubmitStep({ data, onBack, onSuccess }: Props) {
     window.open(MDAC_URL, "_blank", "noopener,noreferrer");
   };
 
-  const consoleShortcut = isMac ? "Cmd + Option + J" : "Ctrl + Shift + J";
+  // Shortcut and instruction vary by browser + OS
+  let consoleShortcut: string;
+  let consoleNote: string;
+  if (isFirefox) {
+    consoleShortcut = isMac ? "Cmd + Option + K" : "Ctrl + Shift + K";
+    consoleNote = "The console opens directly — no extra tab to click.";
+  } else if (isSafari) {
+    consoleShortcut = "Cmd + Option + C";
+    consoleNote = 'If it doesn\'t work, enable Safari\'s Developer menu: Safari → Settings → Advanced → "Show features for web developers".';
+  } else {
+    // Chrome / Edge
+    consoleShortcut = isMac ? "Cmd + Option + J" : "Ctrl + Shift + J";
+    consoleNote = "This opens DevTools directly on the Console tab.";
+  }
 
   return (
     <div className="step-enter space-y-4">
@@ -124,9 +142,7 @@ export default function SubmitStep({ data, onBack, onSuccess }: Props) {
                 In the MDAC tab, press{" "}
                 <kbd className="bg-gray-200 text-gray-800 text-xs font-mono px-1.5 py-0.5 rounded">{consoleShortcut}</kbd>
               </p>
-              <p className="text-xs text-gray-500">
-                This opens DevTools. Click the <strong>Console</strong> tab at the top.
-              </p>
+              <p className="text-xs text-gray-500">{consoleNote}</p>
             </div>
           </div>
         </div>
