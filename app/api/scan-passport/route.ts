@@ -8,7 +8,7 @@ Return ONLY a JSON object with these exact fields (omit any you cannot read clea
 {
   "fullName": "FIRSTNAME LASTNAME" (all caps, given names first then surname),
   "passportNumber": "...",
-  "nationality": "..." (as a demonym like "American", "British", "Malaysian", etc.),
+  "nationality": "..." (full country name like "Canada", "United States", "Malaysia", "United Kingdom"; not a demonym),
   "dateOfBirth": "YYYY-MM-DD",
   "sex": "Male" or "Female",
   "passportExpiry": "YYYY-MM-DD",
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       headers: {
         "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "HTTP-Referer": "https://mdac-better.vercel.app",
+        "HTTP-Referer": process.env.PUBLIC_URL || "https://mdac-better.vercel.app",
         "X-Title": "MDAC Better",
       },
       body: JSON.stringify({
@@ -74,7 +74,15 @@ export async function POST(req: NextRequest) {
     const text = json.choices?.[0]?.message?.content ?? "";
 
     const jsonStr = text.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
-    const parsed = JSON.parse(jsonStr);
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch {
+      return NextResponse.json(
+        { success: false, error: "Could not parse passport data from the scan. Please try again or fill in manually." },
+        { status: 422 }
+      );
+    }
 
     return NextResponse.json({ success: true, data: parsed });
   } catch (err: unknown) {

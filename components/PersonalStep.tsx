@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { type FormData } from "@/lib/types";
-import { NATIONALITIES } from "@/lib/mdac-codes";
+import { COUNTRIES, NATIONALITIES, resolveCountryName } from "@/lib/mdac-codes";
 
 function parseDOB(value: string): { day: string; month: string; year: string } {
   if (!value) return { day: "", month: "", year: "" };
@@ -40,6 +40,8 @@ export default function PersonalStep({ data, onChange, onNext }: Props) {
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [natSearch, setNatSearch] = useState(data.nationality);
   const [showNatDropdown, setShowNatDropdown] = useState(false);
+  const [pobSearch, setPobSearch] = useState(data.placeOfBirth);
+  const [showPobDropdown, setShowPobDropdown] = useState(false);
   const [dob, setDob] = useState(() => parseDOB(data.dateOfBirth));
   const [scanState, setScanState] = useState<"idle" | "scanning" | "done" | "error">("idle");
   const [scanError, setScanError] = useState("");
@@ -55,7 +57,11 @@ export default function PersonalStep({ data, onChange, onNext }: Props) {
       const form = new FormData();
       form.append("image", file);
 
-      const res = await fetch("/api/scan-passport", { method: "POST", body: form });
+      const res = await fetch("/api/scan-passport", {
+        method: "POST",
+        body: form,
+        signal: AbortSignal.timeout(30_000),
+      });
       const json = await res.json();
 
       if (!res.ok || !json.success) {
@@ -67,8 +73,9 @@ export default function PersonalStep({ data, onChange, onNext }: Props) {
       if (d.fullName) updates.fullName = d.fullName;
       if (d.passportNumber) updates.passportNumber = d.passportNumber;
       if (d.nationality) {
-        updates.nationality = d.nationality;
-        setNatSearch(d.nationality);
+        const nationality = resolveCountryName(d.nationality);
+        updates.nationality = nationality;
+        setNatSearch(nationality);
       }
       if (d.dateOfBirth) {
         updates.dateOfBirth = d.dateOfBirth;
@@ -76,8 +83,12 @@ export default function PersonalStep({ data, onChange, onNext }: Props) {
       }
       if (d.sex === "Male" || d.sex === "Female") updates.sex = d.sex;
       if (d.passportExpiry) updates.passportExpiry = d.passportExpiry;
-      if (d.countryOfIssuance) updates.countryOfPassportIssuance = d.countryOfIssuance;
-      if (d.placeOfBirth) updates.placeOfBirth = d.placeOfBirth;
+      if (d.countryOfIssuance) updates.countryOfPassportIssuance = resolveCountryName(d.countryOfIssuance);
+      if (d.placeOfBirth) {
+        const placeOfBirth = resolveCountryName(d.placeOfBirth);
+        updates.placeOfBirth = placeOfBirth;
+        setPobSearch(placeOfBirth);
+      }
       if (d.passportType === "Ordinary" || d.passportType === "Official" || d.passportType === "Diplomatic") {
         updates.passportType = d.passportType;
       }
@@ -105,6 +116,9 @@ export default function PersonalStep({ data, onChange, onNext }: Props) {
 
   const filteredNats = NATIONALITIES.filter((n) =>
     n.toLowerCase().includes(natSearch.toLowerCase())
+  );
+  const filteredPobs = COUNTRIES.filter((country) =>
+    country.toLowerCase().includes(pobSearch.toLowerCase())
   );
 
   const validate = () => {
@@ -392,17 +406,47 @@ export default function PersonalStep({ data, onChange, onNext }: Props) {
 
       {/* Place of Birth */}
       <Field label="Place of Birth (Country)" required>
-        <input
-          type="text"
-          className={inputClass("placeOfBirth")}
-          value={data.placeOfBirth}
-          onChange={(e) => {
-            onChange({ placeOfBirth: e.target.value });
-            if (errors.placeOfBirth) setErrors({ ...errors, placeOfBirth: undefined });
-          }}
-          placeholder="e.g. United States"
-          autoComplete="country-name"
-        />
+        <div className="relative">
+          <input
+            type="text"
+            className={`${inputClass("placeOfBirth")} pr-10`}
+            value={pobSearch}
+            onChange={(e) => {
+              setPobSearch(e.target.value);
+              onChange({ placeOfBirth: "" });
+              setShowPobDropdown(true);
+              if (errors.placeOfBirth) setErrors({ ...errors, placeOfBirth: undefined });
+            }}
+            onFocus={() => setShowPobDropdown(true)}
+            onBlur={() => setTimeout(() => setShowPobDropdown(false), 150)}
+            placeholder="Type to search..."
+            autoComplete="off"
+          />
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </span>
+          {showPobDropdown && filteredPobs.length > 0 && (
+            <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-48 overflow-y-auto">
+              {filteredPobs.map((country) => (
+                <button
+                  key={country}
+                  type="button"
+                  className="w-full text-left px-4 py-2.5 text-sm hover:bg-blue-50 hover:text-[#003893] transition-colors first:rounded-t-xl last:rounded-b-xl"
+                  onMouseDown={() => {
+                    onChange({ placeOfBirth: country });
+                    setPobSearch(country);
+                    setShowPobDropdown(false);
+                    setErrors({ ...errors, placeOfBirth: undefined });
+                  }}
+                >
+                  {country}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         {errors.placeOfBirth && (
           <p className="text-xs text-red-500 mt-1">{errors.placeOfBirth}</p>
         )}
