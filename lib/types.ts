@@ -69,6 +69,13 @@ export const PROFILE_FIELDS: (keyof FormData)[] = [
   "phoneCountryCode",
   "phoneNumber",
   "departureCountry",
+  "modeOfTransport",
+  "flightNumber",
+  "hotelName",
+  "addressInMalaysia",
+  "stateInMalaysia",
+  "cityInMalaysia",
+  "postalCode",
 ];
 
 // NATIONALITIES is exported from mdac-codes.ts (same list as COUNTRIES — 275 entries matching the official MDAC site)
@@ -80,19 +87,19 @@ export const MALAYSIAN_STATES = [
   "Johor",
   "Kedah",
   "Kelantan",
-  "Kuala Lumpur",
-  "Labuan",
   "Melaka",
   "Negeri Sembilan",
   "Pahang",
-  "Penang",
+  "Pulau Pinang",
   "Perak",
   "Perlis",
-  "Putrajaya",
-  "Sabah",
-  "Sarawak",
   "Selangor",
   "Terengganu",
+  "Sabah",
+  "Sarawak",
+  "WP Kuala Lumpur",
+  "WP Labuan",
+  "WP Putrajaya",
 ];
 
 export const PHONE_COUNTRY_CODES = [
