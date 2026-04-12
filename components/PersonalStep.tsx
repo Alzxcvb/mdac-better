@@ -57,11 +57,7 @@ export default function PersonalStep({ data, onChange, onNext }: Props) {
       const form = new FormData();
       form.append("image", file);
 
-      const res = await fetch("/api/scan-passport", {
-        method: "POST",
-        body: form,
-        signal: AbortSignal.timeout(30_000),
-      });
+      const res = await fetch("/api/scan-passport", { method: "POST", body: form, signal: AbortSignal.timeout(30_000) });
       const json = await res.json();
 
       if (!res.ok || !json.success) {
