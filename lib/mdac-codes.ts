@@ -300,6 +300,22 @@ export const COUNTRIES = Object.keys(COUNTRY_TO_ISO3).sort();
 // Alias for nationality dropdown (same list)
 export const NATIONALITIES = COUNTRIES;
 
+const ISO3_TO_COUNTRY = Object.fromEntries(
+  Object.entries(COUNTRY_TO_ISO3).map(([country, iso3]) => [iso3, country])
+) as Record<string, string>;
+
+export function resolveCountryName(value: string): string {
+  const normalized = value.trim();
+  if (!normalized) return "";
+  if (COUNTRY_TO_ISO3[normalized]) return normalized;
+
+  const iso3 = normalized.toUpperCase();
+  if (ISO3_TO_COUNTRY[iso3]) return ISO3_TO_COUNTRY[iso3];
+
+  const looseMatch = COUNTRIES.find((country) => country.toLowerCase() === normalized.toLowerCase());
+  return looseMatch ?? normalized;
+}
+
 // ---- Malaysian state → official code ----
 
 export const STATE_TO_CODE: Record<string, string> = {
