@@ -14,6 +14,8 @@ import {
   clearDraft,
   buildNewFormFromProfile,
   loadDraft,
+  saveStep,
+  loadStep,
 } from "@/lib/storage";
 import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 
@@ -30,8 +32,18 @@ function FormContent() {
     if (initialized) return;
     setInitialized(true);
 
+    // If there's an in-flight draft past step 1, always restore it — mode
+    // params come from fresh navigations, not reloads, so an existing draft
+    // with a saved step means the user reloaded mid-flow.
+    const existingDraft = loadDraft();
+    const savedStep = loadStep();
+    if (existingDraft && savedStep && savedStep > 1) {
+      setFormData(existingDraft);
+      setStep(savedStep);
+      return;
+    }
+
     if (mode === "saved") {
-      // Load profile fields pre-filled
       const prefilled = buildNewFormFromProfile();
       setFormData(prefilled);
     } else if (mode === "trip") {
@@ -48,14 +60,10 @@ function FormContent() {
       } else {
         setFormData({ ...EMPTY_FORM });
       }
+    } else if (existingDraft) {
+      setFormData(existingDraft);
     } else {
-      // Check for a draft or start fresh
-      const draft = loadDraft();
-      if (draft) {
-        setFormData(draft);
-      } else {
-        setFormData({ ...EMPTY_FORM });
-      }
+      setFormData({ ...EMPTY_FORM });
     }
   }, [mode, initialized, searchParams]);
 
@@ -78,16 +86,26 @@ function FormContent() {
         transport: formData.modeOfTransport || "unknown",
       });
     }
-    setStep((s) => s + 1);
+    setStep((s) => {
+      const next = s + 1;
+      saveStep(next);
+      return next;
+    });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [formData.modeOfTransport, mode, step]);
 
   const handleBack = useCallback(() => {
-    setStep((s) => s - 1);
+    setStep((s) => {
+      const next = s - 1;
+      saveStep(next);
+      return next;
+    });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
-  // Called when ReviewStep submits — save profile, clear draft, proceed to submit step
+  // Called when ReviewStep submits — save profile, advance to submit step.
+  // Draft stays in localStorage until actual submission succeeds so that
+  // reloads / desktop-view switches on step 4 don't wipe the user's data.
   const handleReviewSubmit = useCallback(() => {
     trackEvent(ANALYTICS_EVENTS.step3ReviewSubmit, {
       save_profile: formData.saveProfile,
@@ -96,14 +114,14 @@ function FormContent() {
     if (formData.saveProfile) {
       saveProfile(formData);
     }
-    clearDraft();
     setStep(4);
+    saveStep(4);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [formData]);
 
-  // Called when SubmitStep succeeds — navigate to confirmation
   const handleSubmitSuccess = useCallback(() => {
     sessionStorage.setItem("mdac_confirmation", JSON.stringify(formData));
+    clearDraft();
     router.push("/confirmation?submitted=true");
   }, [formData, router]);
 
@@ -149,6 +167,7 @@ function FormContent() {
             onSuccess={handleSubmitSuccess}
             onBack={() => {
               setStep(3);
+              saveStep(3);
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
           />
