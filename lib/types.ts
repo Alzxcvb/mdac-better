@@ -127,6 +127,7 @@ export const PHONE_COUNTRY_CODES = [
   { code: "+64", country: "New Zealand" },
   { code: "+886", country: "Taiwan" },
   { code: "+852", country: "Hong Kong" },
+  { code: "+971", country: "United Arab Emirates (Dubai)" },
   { code: "+84", country: "Vietnam" },
   { code: "+92", country: "Pakistan" },
   { code: "+880", country: "Bangladesh" },
