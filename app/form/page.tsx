@@ -15,6 +15,13 @@ import {
   buildNewFormFromProfile,
   loadDraft,
 } from "@/lib/storage";
+import {
+  trackFormStarted,
+  trackFormStep,
+  trackProfileSaved,
+  trackQrGenerated,
+  trackSubmissionDone,
+} from "@/lib/analytics";
 
 function FormContent() {
   const router = useRouter();
@@ -28,6 +35,8 @@ function FormContent() {
   useEffect(() => {
     if (initialized) return;
     setInitialized(true);
+
+    trackFormStarted(mode || "new");
 
     if (mode === "saved") {
       // Load profile fields pre-filled
@@ -67,7 +76,11 @@ function FormContent() {
   }, []);
 
   const handleNext = useCallback(() => {
-    setStep((s) => s + 1);
+    setStep((s) => {
+      const next = s + 1;
+      trackFormStep(next);
+      return next;
+    });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
@@ -80,14 +93,17 @@ function FormContent() {
   const handleReviewSubmit = useCallback(() => {
     if (formData.saveProfile) {
       saveProfile(formData);
+      trackProfileSaved();
     }
     clearDraft();
+    trackQrGenerated();
     setStep(4);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [formData]);
 
   // Called when SubmitStep succeeds — navigate to confirmation
   const handleSubmitSuccess = useCallback(() => {
+    trackSubmissionDone();
     sessionStorage.setItem("mdac_confirmation", JSON.stringify(formData));
     router.push("/confirmation?submitted=true");
   }, [formData, router]);

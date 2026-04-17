@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { hasProfile, loadProfile } from "@/lib/storage";
+import { trackAppOpened } from "@/lib/analytics";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -12,9 +13,11 @@ export default function LandingPage() {
 
   useEffect(() => {
     setMounted(true);
-    setHasSaved(hasProfile());
+    const profileExists = hasProfile();
+    setHasSaved(profileExists);
     const profile = loadProfile();
     if (profile?.fullName) setSavedName(profile.fullName);
+    trackAppOpened(profileExists);
   }, []);
 
   const handleNew = () => {
