@@ -11,6 +11,7 @@ import {
   toMdacDate,
   phoneCodeToRegion,
 } from "@/lib/mdac-codes";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 
 const MDAC_URL = "https://imigresen-online.imi.gov.my/mdac/main?registerMain";
 
@@ -58,6 +59,7 @@ function buildScript(data: FormData): string {
 }
 
 type BrowserType = "firefox" | "safari" | "chrome";
+type SubmitMethod = "bookmark" | "console";
 
 export default function SubmitStep({ data, onBack, onSuccess }: Props) {
   const script = useMemo(() => buildScript(data), [data]);
@@ -97,6 +99,38 @@ export default function SubmitStep({ data, onBack, onSuccess }: Props) {
     ? (isMac ? "Cmd + Option + K" : "Ctrl + Shift + K")
     : (isMac ? "Cmd + Option + J" : "Ctrl + Shift + J");
 
+  const recordMethodChosen = (method: SubmitMethod) => {
+    trackEvent(ANALYTICS_EVENTS.submitMethodChosen, {
+      method,
+      browser,
+    });
+  };
+
+  const recordOpenMdac = (method: SubmitMethod) => {
+    recordMethodChosen(method);
+    trackEvent(ANALYTICS_EVENTS.submitOpenedMdac, {
+      method,
+      browser,
+    });
+  };
+
+  const recordCopyScript = (method: SubmitMethod, codeType: "script" | "bookmarklet") => {
+    recordMethodChosen(method);
+    trackEvent(ANALYTICS_EVENTS.submitCopiedScript, {
+      method,
+      code_type: codeType,
+      browser,
+    });
+  };
+
+  const handleDoneSubmitted = () => {
+    trackEvent(ANALYTICS_EVENTS.userConfirmedSubmitted, {
+      browser,
+      transport: data.modeOfTransport || "unknown",
+    });
+    onSuccess();
+  };
+
   const BookmarkSteps = () => (
     <>
       {/* Step 1 — drag bookmark */}
@@ -135,6 +169,7 @@ export default function SubmitStep({ data, onBack, onSuccess }: Props) {
             href={MDAC_URL}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => recordOpenMdac("bookmark")}
             className="flex items-center justify-center gap-2 w-full bg-[#003893] text-white font-semibold text-sm py-3 rounded-xl transition-all active:scale-95"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -173,7 +208,12 @@ export default function SubmitStep({ data, onBack, onSuccess }: Props) {
         <div className="flex-1 space-y-2">
           <p className="text-sm font-semibold text-gray-900">Open the MDAC form</p>
           <button
-            onClick={() => { copyScript(); window.open(MDAC_URL, "_blank", "noopener,noreferrer"); }}
+            onClick={() => {
+              recordOpenMdac("console");
+              recordCopyScript("console", "script");
+              copyScript();
+              window.open(MDAC_URL, "_blank", "noopener,noreferrer");
+            }}
             className="flex items-center justify-center gap-2 w-full bg-[#003893] text-white font-semibold text-sm py-3 rounded-xl transition-all active:scale-95"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -224,7 +264,13 @@ export default function SubmitStep({ data, onBack, onSuccess }: Props) {
             <p className="text-xs text-gray-500">The form fills instantly. A dialog confirms when done.</p>
           </div>
           {!copied && (
-            <button onClick={copyScript} className="text-xs text-[#003893] font-semibold underline underline-offset-2">
+            <button
+              onClick={() => {
+                recordCopyScript("console", "script");
+                copyScript();
+              }}
+              className="text-xs text-[#003893] font-semibold underline underline-offset-2"
+            >
               Didn&apos;t copy yet? Copy fill code
             </button>
           )}
@@ -297,7 +343,13 @@ export default function SubmitStep({ data, onBack, onSuccess }: Props) {
                       <li>Name it <strong>MDAC Autofill</strong>, clear the URL field, paste the bookmark code.</li>
                       <li>Save — then click it on the MDAC form page.</li>
                     </ol>
-                    <button onClick={copyBookmarklet} className="text-xs text-[#003893] font-semibold underline underline-offset-2">
+                    <button
+                      onClick={() => {
+                        recordCopyScript("bookmark", "bookmarklet");
+                        copyBookmarklet();
+                      }}
+                      className="text-xs text-[#003893] font-semibold underline underline-offset-2"
+                    >
                       {copied ? "Copied!" : "Copy bookmark code"}
                     </button>
                   </div>
@@ -316,7 +368,7 @@ export default function SubmitStep({ data, onBack, onSuccess }: Props) {
           Back
         </button>
         <button
-          onClick={onSuccess}
+          onClick={handleDoneSubmitted}
           className="flex-1 bg-[#003893] text-white font-semibold text-sm py-3 rounded-xl transition-all active:scale-95"
         >
           Done — I submitted ✓

@@ -15,6 +15,7 @@ import {
   buildNewFormFromProfile,
   loadDraft,
 } from "@/lib/storage";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 
 function FormContent() {
   const router = useRouter();
@@ -67,9 +68,19 @@ function FormContent() {
   }, []);
 
   const handleNext = useCallback(() => {
+    if (step === 1) {
+      trackEvent(ANALYTICS_EVENTS.step1Complete, {
+        mode: mode ?? "draft",
+      });
+    } else if (step === 2) {
+      trackEvent(ANALYTICS_EVENTS.step2Complete, {
+        mode: mode ?? "draft",
+        transport: formData.modeOfTransport || "unknown",
+      });
+    }
     setStep((s) => s + 1);
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+  }, [formData.modeOfTransport, mode, step]);
 
   const handleBack = useCallback(() => {
     setStep((s) => s - 1);
@@ -78,6 +89,10 @@ function FormContent() {
 
   // Called when ReviewStep submits — save profile, clear draft, proceed to submit step
   const handleReviewSubmit = useCallback(() => {
+    trackEvent(ANALYTICS_EVENTS.step3ReviewSubmit, {
+      save_profile: formData.saveProfile,
+      transport: formData.modeOfTransport || "unknown",
+    });
     if (formData.saveProfile) {
       saveProfile(formData);
     }

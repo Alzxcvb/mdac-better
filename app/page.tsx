@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { hasProfile, loadProfile } from "@/lib/storage";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -12,16 +13,30 @@ export default function LandingPage() {
 
   useEffect(() => {
     setMounted(true);
-    setHasSaved(hasProfile());
+    const saved = hasProfile();
+    setHasSaved(saved);
     const profile = loadProfile();
     if (profile?.fullName) setSavedName(profile.fullName);
+    if (saved) {
+      trackEvent(ANALYTICS_EVENTS.profileLoaded, {
+        has_saved_profile: true,
+      });
+    }
   }, []);
 
   const handleNew = () => {
+    trackEvent(ANALYTICS_EVENTS.formStarted, {
+      mode: "new",
+      has_saved_profile: hasSaved,
+    });
     router.push("/form?mode=new");
   };
 
   const handleSaved = () => {
+    trackEvent(ANALYTICS_EVENTS.formStarted, {
+      mode: "saved",
+      has_saved_profile: hasSaved,
+    });
     router.push("/form?mode=saved");
   };
 
