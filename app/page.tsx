@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { hasProfile, loadProfile } from "@/lib/storage";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -12,16 +13,30 @@ export default function LandingPage() {
 
   useEffect(() => {
     setMounted(true);
-    setHasSaved(hasProfile());
+    const saved = hasProfile();
+    setHasSaved(saved);
     const profile = loadProfile();
     if (profile?.fullName) setSavedName(profile.fullName);
+    if (saved) {
+      trackEvent(ANALYTICS_EVENTS.profileLoaded, {
+        has_saved_profile: true,
+      });
+    }
   }, []);
 
   const handleNew = () => {
+    trackEvent(ANALYTICS_EVENTS.formStarted, {
+      mode: "new",
+      has_saved_profile: hasSaved,
+    });
     router.push("/form?mode=new");
   };
 
   const handleSaved = () => {
+    trackEvent(ANALYTICS_EVENTS.formStarted, {
+      mode: "saved",
+      has_saved_profile: hasSaved,
+    });
     router.push("/form?mode=saved");
   };
 
@@ -101,6 +116,17 @@ export default function LandingPage() {
 
       {/* Main content */}
       <div className="flex-1 px-6 py-8 max-w-lg mx-auto w-full">
+        {/* Desktop-only notice */}
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-6 flex items-start gap-3">
+          <span className="text-xl flex-shrink-0 mt-0.5">🖥️</span>
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Desktop only for now</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Open this on your laptop or desktop computer. Native iOS &amp; Android apps are coming soon.
+            </p>
+          </div>
+        </div>
+
         {/* Comparison callout */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-8">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
@@ -111,7 +137,7 @@ export default function LandingPage() {
               { icon: "📷", text: "Scan your passport — auto-fills the entire form" },
               { icon: "📅", text: "Date picker that works (no 60-year scrolling)" },
               { icon: "💾", text: "Profile saved — one tap on your next trip" },
-              { icon: "📱", text: "Works on your phone — Chrome extensions don't" },
+              { icon: "📱", text: "Mobile app (iOS & Android) coming soon" },
               { icon: "✅", text: "QR code generates every time — no broken links" },
             ].map((item) => (
               <div key={item.text} className="flex items-start gap-2.5">

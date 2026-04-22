@@ -2,6 +2,7 @@ import { FormData, PROFILE_FIELDS, EMPTY_FORM } from "./types";
 
 const STORAGE_KEY = "mdac_profile";
 const FORM_KEY = "mdac_form_draft";
+const STEP_KEY = "mdac_form_step";
 
 export function saveProfile(data: FormData): void {
   if (typeof window === "undefined") return;
@@ -52,6 +53,20 @@ export function loadDraft(): FormData | null {
 export function clearDraft(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(FORM_KEY);
+  localStorage.removeItem(STEP_KEY);
+}
+
+export function saveStep(step: number): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(STEP_KEY, String(step));
+}
+
+export function loadStep(): number | null {
+  if (typeof window === "undefined") return null;
+  const raw = localStorage.getItem(STEP_KEY);
+  if (!raw) return null;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) && n >= 1 && n <= 4 ? n : null;
 }
 
 export function mergeProfileIntoForm(

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import QRConfirmation from "@/components/QRConfirmation";
 import { type FormData } from "@/lib/types";
 import { resetTripFields } from "@/lib/storage";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 
 function ConfirmationContent() {
   const router = useRouter();
@@ -12,6 +13,7 @@ function ConfirmationContent() {
   const [formData, setFormData] = useState<FormData | null>(null);
   const [error, setError] = useState(false);
   const wasSubmitted = searchParams.get("submitted") === "true";
+  const trackedQr = useRef(false);
 
   useEffect(() => {
     const raw = sessionStorage.getItem("mdac_confirmation");
@@ -26,6 +28,15 @@ function ConfirmationContent() {
       setError(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (!formData || trackedQr.current) return;
+    trackedQr.current = true;
+    trackEvent(ANALYTICS_EVENTS.qrGenerated, {
+      submitted: wasSubmitted,
+      transport: formData.modeOfTransport || "unknown",
+    });
+  }, [formData, wasSubmitted]);
 
   const handleNewTrip = () => {
     if (!formData) {

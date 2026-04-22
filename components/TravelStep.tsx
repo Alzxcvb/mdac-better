@@ -129,7 +129,7 @@ export default function TravelStep({ data, onChange, onNext, onBack }: Props) {
             style={{ minWidth: "95px" }}
           >
             {PHONE_COUNTRY_CODES.map((c) => (
-              <option key={c.code} value={c.code}>
+              <option key={c.country} value={c.code}>
                 {c.code} {c.country}
               </option>
             ))}
