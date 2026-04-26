@@ -117,11 +117,11 @@ export default function LandingPage() {
       {/* Main content */}
       <div className="flex-1 px-6 py-8 max-w-lg mx-auto w-full">
         {/* Desktop-only notice */}
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 mb-6 flex items-start gap-3">
-          <span className="text-xl flex-shrink-0 mt-0.5">🖥️</span>
+        <div className="bg-red-600 border border-red-700 rounded-2xl px-4 py-3 mb-6 flex items-start gap-3">
+          <span className="text-xl flex-shrink-0 mt-0.5">⚠️</span>
           <div>
-            <p className="text-sm font-semibold text-amber-800">Desktop only for now</p>
-            <p className="text-xs text-amber-700 mt-0.5">
+            <p className="text-sm font-semibold text-white">Desktop only — won&apos;t work on your phone</p>
+            <p className="text-xs text-red-100 mt-0.5">
               Open this on your laptop or desktop computer. Native iOS &amp; Android apps are coming soon.
             </p>
           </div>
