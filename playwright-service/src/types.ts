@@ -91,11 +91,15 @@ export const COUNTRY_TO_ISO3: Record<string, string> = {
   "Zimbabwe (Alt)": "ZIM", "DR Congo (Historical)": "ZAR", "Indonesian Stateless": "ZZB", "Not Applicable": "ZZD",
 };
 
+// Codes verified against the live MDAC city endpoint (retrieveRefCity&state=NN)
+// on 2026-07-07 — federal territories are separate codes 14/15/16.
 export const STATE_TO_CODE: Record<string, string> = {
-  Johor: "01", Kedah: "02", Kelantan: "03", "Kuala Lumpur": "04", Labuan: "05",
-  Melaka: "06", "Negeri Sembilan": "07", Pahang: "08", Penang: "09", Perak: "10",
-  Perlis: "11", Putrajaya: "12", Sabah: "13", Sarawak: "14", Selangor: "15",
-  Terengganu: "16",
+  Johor: "01", Kedah: "02", Kelantan: "03", Melaka: "04", "Negeri Sembilan": "05",
+  Pahang: "06", "Pulau Pinang": "07", Perak: "08", Perlis: "09", Selangor: "10",
+  Terengganu: "11", Sabah: "12", Sarawak: "13", "WP Kuala Lumpur": "14",
+  "WP Labuan": "15", "WP Putrajaya": "16",
+  // Aliases for older label spellings
+  Penang: "07", "Kuala Lumpur": "14", Labuan: "15", Putrajaya: "16",
 };
 
 export const TRANSPORT_TO_CODE: Record<string, string> = {
