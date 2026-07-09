@@ -7,7 +7,7 @@ Date started: 2026-04-16
 Goal: true one-click autofill (not copy/paste) that beats MDAC Express,
 Autofill MDAC, and hunglun/autofill-mdac-form.
 
-Location: `/Users/alexandercoffman/ClaudeProjects/mdac-better-extension/`
+Location: `/Users/alexandercoffman/Dev/mdac-better-extension/`
 (separate directory, separate git repo, not pushed to GitHub yet).
 
 - [x] Read live app's data model (`lib/types.ts`, `lib/storage.ts`)
